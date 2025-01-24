@@ -1,5 +1,5 @@
 #![allow(clippy::type_complexity)]
-use bevy::{asset::Assets, prelude::*, window::PresentMode};
+use bevy::{asset::Assets, math::vec2, prelude::*, transform, window::PresentMode};
 use bevy_kira_audio::prelude::*;
 use main_menu::main_menu_plugin::MainMenuPlugin;
 
@@ -39,18 +39,38 @@ fn setup_game(
         Mesh2d(meshes.add(Rectangle::new(width, height))),
         MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::ORANGE))),
         Transform::default(),
-        ColliderDensity(2.0),
+        ColliderDensity(0.01),
         Player::one,
+        ExternalForce::default().with_persistence(false),
     ));
 }
 
 //, mut interaction_query: Query<(&Transform), (With<Player>)>
-fn test_force(mut commands: Commands) {
-    commands.spawn((
-        RigidBody::Dynamic,
-        ExternalForce::new(Vec2::Y * 100.),
-        Transform::from_xyz(1.0, 0., 0.),
-    ));
+fn test_force(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut cachet_query: Query<(&Transform, &mut ExternalForce), (With<Player>)>,
+) {
+    let amplitude = Vec3::Y * 1000.;
+    let left = Vec3::new(-64., 0., 0.);
+    let right = Vec3::new(64., 0., 0.);
+    let center = Vec3::new(0., 0.1, 0.);
+    for (transform, mut force) in &mut cachet_query {
+        if keyboard_input.pressed(KeyCode::KeyA) {
+            force.apply_force_at_point(
+                (transform.rotation * amplitude).xy(),
+                (transform.rotation * left).xy(),
+                (transform.rotation * center).xy(),
+            );
+        }
+
+        if keyboard_input.pressed(KeyCode::KeyD) {
+            force.apply_force_at_point(
+                (transform.rotation * amplitude).xy(),
+                (transform.rotation * right).xy(),
+                (transform.rotation * center).xy(),
+            );
+        }
+    }
 }
 
 // fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
