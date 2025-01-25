@@ -193,7 +193,6 @@ fn update_camera(
         let new_camera_translate = CAM_ELASTICITY * camera_transform.translation + (1.0 - CAM_ELASTICITY) * target_position;
         camera_transform.translation = new_camera_translate;
 
-
         let mut cam_area = cam.area;
         cam_area.min += new_camera_translate.xy();
         cam_area.max += new_camera_translate.xy();
@@ -202,17 +201,19 @@ fn update_camera(
 
         let mut zoom: f32 = cam.scale;
 
-        if (cam_area.union(interest_area) != cam_area)
+        if cam_area.union(interest_area) != cam_area
         {
             zoom *= 1.01;
         }
 
+        let inner = cam_area.inflate(-200.);
+        if inner.union(interest_area) == inner
+        {
+            zoom *= 0.99;
+        }
+
         zoom = zoom.clamp(CAM_ZOOM_MIN, CAM_ZOOM_MAX);
         cam.scale = zoom;
-        // info!("Camera: {:?}", camera_transform);
-
-        // info!("scale {:?}", cam.scale);
-        // info!("area  {:?}", cam.area);
     }
 
 }
