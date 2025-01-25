@@ -13,6 +13,9 @@ use constants::*;
 use rand::Rng;
 
 #[derive(Component)]
+struct InGame;
+
+#[derive(Component)]
 struct Player(u32);
 
 #[derive(Component, Debug)]
@@ -35,6 +38,14 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
+fn resetup(mut commands: Commands, query : Query<Entity, With<Camera2d>>) {
+    for entity in query.iter()
+    {
+        commands.entity(entity).despawn();
+    }
+    commands.spawn(Camera2d);
+}
+
 fn setup_glasses(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -48,6 +59,7 @@ fn setup_glasses(
 
     // Background
     commands.spawn((
+        InGame,
         Transform::default()
             .with_translation(Vec3::new(0., 1000., -2.))
             .with_scale(Vec3::new(2., 2., 1.)),
@@ -56,11 +68,13 @@ fn setup_glasses(
 
     // Arena
     commands.spawn((
+        InGame,
         Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., WATER_LEVEL))),
         MeshMaterial2d(materials.add(water_color)),
         Transform::default().with_translation(Vec3::new(0., (WATER_LEVEL - GLASS_HEIGHT) / 2., 2.)),
     ));
     commands.spawn((
+        InGame,
         Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., WATER_LEVEL))),
         MeshMaterial2d(materials.add(water_color)),
         Transform::default().with_translation(Vec3::new(
@@ -72,6 +86,7 @@ fn setup_glasses(
 
     // Glasses BOTTOM
     commands.spawn((
+        InGame,
         RigidBody::Static,
         Collider::rectangle(GLASS_RADIUS * 2., GLASS_WIDTH),
         Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., GLASS_WIDTH))),
@@ -81,6 +96,7 @@ fn setup_glasses(
 
     // Glasses LEFT
     commands.spawn((
+        InGame,
         RigidBody::Static,
         Collider::rectangle(GLASS_WIDTH, GLASS_HEIGHT),
         Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
@@ -90,6 +106,7 @@ fn setup_glasses(
 
     // Glasses RIGHT
     commands.spawn((
+        InGame,
         RigidBody::Static,
         Collider::rectangle(GLASS_WIDTH, GLASS_HEIGHT),
         Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
@@ -112,6 +129,7 @@ fn setup_game_player(
         color_texture: Some(img),
     });
     commands.spawn((
+        InGame,
         RigidBody::Dynamic,
         Collider::rectangle(width, height),
         Mesh2d(meshes.add(Rectangle::new(width, height))),
@@ -119,7 +137,7 @@ fn setup_game_player(
         Transform::default(),
         ColliderDensity(CACHET_DENSITY),
         Player(0),
-        Health(100.),
+        Health(INITIAL_HEALTH),
         Volume(width * height),
         ExternalForce::default().with_persistence(false),
     ));
@@ -140,6 +158,7 @@ fn spawn_bubble(
         .mix(&Color::from(bevy::color::palettes::css::WHITE), 0.5);
     if is_colliding {
         commands.spawn((
+            InGame,
             Bubble,
             RigidBody::Dynamic,
             Collider::circle(BUBBLE_RADIUS),
@@ -153,6 +172,7 @@ fn spawn_bubble(
         ));
     } else {
         commands.spawn((
+            InGame,
             Bubble,
             RigidBody::Dynamic,
             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
@@ -372,9 +392,24 @@ fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), W
     }
 }
 
-fn try_kill_by_health(mut commands: Commands, query: Query<(Entity, &Health), With<Player>>)
+fn try_kill_by_health(mut app_state: ResMut<NextState<MyAppState>>,
+    query: Query<&Health, With<Player>>)
 {
-    for (entity, health) in query.iter() {
+    for health in query.iter() {
+        if health.0 < 0.
+        {
+            warn!("health depleted: {:?}", health);
+            app_state.set(MyAppState::MainMenu);
+        }
+    }
+}
+
+
+fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>)
+{
+    for entity in query.iter()
+    {
+        commands.entity(entity).despawn();
     }
 }
 
@@ -406,6 +441,7 @@ pub fn run() {
     // }
     app.add_systems(Startup, setup);
 
+    app.add_systems(OnEnter(MyAppState::InGame), resetup);
     app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
     app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
     app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
@@ -419,6 +455,7 @@ pub fn run() {
         FixedPostUpdate,
         (try_kill_bubbles, try_kill_by_health).run_if(in_state(MyAppState::InGame)),
     );
+    app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
 
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
 
