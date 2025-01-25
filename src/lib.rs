@@ -1,5 +1,8 @@
 #![allow(clippy::type_complexity)]
-use bevy::{asset::Assets, prelude::*, sprite::Material2dPlugin, window::PresentMode, ui::widget::NodeImageMode};
+use bevy::{
+    asset::Assets, prelude::*, sprite::Material2dPlugin, ui::widget::NodeImageMode,
+    window::PresentMode,
+};
 use bevy_kira_audio::prelude::*;
 use cachet_material::CachetMaterial;
 use main_menu::main_menu_plugin::MainMenuPlugin;
@@ -274,36 +277,124 @@ fn is_in_water(translation: &Vec3) -> bool {
         && translation.x <= GLASS_RADIUS
 }
 
+fn play_effervescent_sound(
+    asset_server: Res<AssetServer>,
+    audio1: Res<AudioChannel<EffervescentChannelp1>>,
+    audio2: Res<AudioChannel<EffervescentChannelp2>>,
+    audio3: Res<AudioChannel<EffervescentChannelp3>>,
+    audio4: Res<AudioChannel<EffervescentChannelp4>>,
+    in_water_object: Query<(&Transform, &Player)>,
+) {
+    for (transform, player) in &in_water_object {
+        if is_in_water(&transform.translation) {
+            match player.0 {
+                0 => {
+                    if !audio1.is_playing_sound() {
+                        audio1
+                            .play(asset_server.load("audio/Sfx_effer1.wav"))
+                            .with_volume(0.08)
+                            .looped();
+                    }
+                }
+                1 => {
+                    if !audio2.is_playing_sound() {
+                        audio2
+                            .play(asset_server.load("audio/Sfx_effer2.wav"))
+                            .with_volume(0.08)
+                            .looped();
+                    }
+                }
+                2 => {
+                    if !audio3.is_playing_sound() {
+                        audio3
+                            .play(asset_server.load("audio/Sfx_effer1.wav"))
+                            .with_volume(0.08)
+                            .looped();
+                    }
+                }
+                3 => {
+                    if !audio4.is_playing_sound() {
+                        audio4
+                            .play(asset_server.load("audio/Sfx_effer2.wav"))
+                            .with_volume(0.08)
+                            .looped();
+                    }
+                }
+                _ => (),
+            }
+        } else {
+            match player.0 {
+                0 => {
+                    if audio1.is_playing_sound() {
+                        audio1.stop();
+                    }
+                }
+                1 => {
+                    if audio2.is_playing_sound() {
+                        audio2.stop();
+                    }
+                }
+                2 => {
+                    if audio3.is_playing_sound() {
+                        audio3.stop();
+                    }
+                }
+                3 => {
+                    if audio4.is_playing_sound() {
+                        audio4.stop();
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+}
+
 fn play_turbo_sound1(
     asset_server: Res<AssetServer>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    audio: Res<Audio>,
     audio1: Res<AudioChannel<TurboChannel1p1>>,
     audio2: Res<AudioChannel<TurboChannel2p1>>,
+    in_water_object: Query<(&Transform, &Player)>,
 ) {
-    if keyboard_input.pressed(KeyCode::KeyD)
-        || keyboard_input.pressed(KeyCode::KeyW)
-        || keyboard_input.pressed(KeyCode::KeyS)
-    {
-        if !audio1.is_playing_sound() {
-            audio1
-                .play(asset_server.load("audio/Sfx_boost1.wav"))
-                .loop_from(1.0);
-        }
-    } else if audio1.is_playing_sound() {
-        audio1.stop();
-    }
+    for (transform, player) in &in_water_object {
+        if is_in_water(&transform.translation) && player.0 == 0 {
+            if keyboard_input.pressed(KeyCode::KeyD)
+                || keyboard_input.pressed(KeyCode::KeyW)
+                || keyboard_input.pressed(KeyCode::KeyS)
+            {
+                if !audio1.is_playing_sound() {
+                    audio.play(asset_server.load("audio/Sfx_boostExplosion.wav"));
+                    audio1
+                        .play(asset_server.load("audio/Sfx_boost1.wav"))
+                        .loop_from(1.0);
+                }
+            } else if audio1.is_playing_sound() {
+                audio1.stop();
+            }
 
-    if keyboard_input.pressed(KeyCode::KeyA)
-        || keyboard_input.pressed(KeyCode::KeyW)
-        || keyboard_input.pressed(KeyCode::KeyS)
-    {
-        if !audio2.is_playing_sound() {
-            audio2
-                .play(asset_server.load("audio/Sfx_boost2.wav"))
-                .loop_from(1.0);
+            if keyboard_input.pressed(KeyCode::KeyA)
+                || keyboard_input.pressed(KeyCode::KeyW)
+                || keyboard_input.pressed(KeyCode::KeyS)
+            {
+                if !audio2.is_playing_sound() {
+                    audio.play(asset_server.load("audio/Sfx_boostExplosion.wav"));
+                    audio2
+                        .play(asset_server.load("audio/Sfx_boost2.wav"))
+                        .loop_from(1.0);
+                }
+            } else if audio2.is_playing_sound() {
+                audio2.stop();
+            }
+        } else {
+            if audio2.is_playing_sound() {
+                audio2.stop();
+            }
+            if audio1.is_playing_sound() {
+                audio1.stop();
+            }
         }
-    } else if audio2.is_playing_sound() {
-        audio2.stop();
     }
 }
 
@@ -480,11 +571,12 @@ fn update_camera(
     }
 }
 
-// fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
-//     audio
-//         .play(asset_server.load(""))
-//         .looped();
-// }
+fn play_music(asset_server: Res<AssetServer>, audio: Res<Audio>) {
+    audio
+        .play(asset_server.load("audio/Music_Les petits effervescents v1.mp3"))
+        .with_volume(2.0)
+        .looped();
+}
 
 fn update_health(mut query: Query<(&mut Health, &Transform)>) {
     for (mut health, transform) in &mut query {
@@ -496,14 +588,11 @@ fn update_health(mut query: Query<(&mut Health, &Transform)>) {
 
 fn update_ui(
     mut query_players: Query<(&Health, &Player)>,
-    mut query_ui: Query<(&mut Node, &HudPlayer)>
+    mut query_ui: Query<(&mut Node, &HudPlayer)>,
 ) {
-    for (health, player) in &mut query_players
-    {
-        for (mut node, hudplayer) in &mut query_ui
-        {
-            if hudplayer.0 == player.0
-            {
+    for (health, player) in &mut query_players {
+        for (mut node, hudplayer) in &mut query_ui {
+            if hudplayer.0 == player.0 {
                 let min = 13.;
                 node.width = Val::Percent(min + (100. - min) * health.0 / INITIAL_HEALTH);
             }
@@ -532,7 +621,6 @@ fn try_kill_by_health(
 }
 
 fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
-
     let image_outer_bar = asset_server.load("sprite/bar_outer.png");
     let image_inner_bar = asset_server.load("sprite/bar_inner.png");
 
@@ -543,21 +631,24 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         max_corner_scale: 1.0,
     };
     commands
-        .spawn((InGame, Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(12.0),
-            top: Val::Percent(86.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::SpaceEvenly,
-            ..default()
-        }))
+        .spawn((
+            InGame,
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(12.0),
+                top: Val::Percent(86.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::SpaceEvenly,
+                ..default()
+            },
+        ))
         .with_children(|parent| {
             for (w, h, tag) in [
                 (100.0, 32.0, HudPlayer(0)),
                 (100.0, 32.0, HudPlayer(1)),
                 (100.0, 32.0, HudPlayer(2)),
-                (100.0, 32.0, HudPlayer(3))
-                ] {
+                (100.0, 32.0, HudPlayer(3)),
+            ] {
                 parent
                     .spawn((
                         InGame,
@@ -601,10 +692,8 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>)
-{
-    for entity in query.iter()
-    {
+fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>) {
+    for entity in query.iter() {
         commands.entity(entity).despawn();
     }
 }
@@ -627,6 +716,15 @@ struct TurboChannel2p3;
 struct TurboChannel1p4;
 #[derive(Resource, Component, Default, Clone)]
 struct TurboChannel2p4;
+
+#[derive(Resource, Component, Default, Clone)]
+struct EffervescentChannelp1;
+#[derive(Resource, Component, Default, Clone)]
+struct EffervescentChannelp2;
+#[derive(Resource, Component, Default, Clone)]
+struct EffervescentChannelp3;
+#[derive(Resource, Component, Default, Clone)]
+struct EffervescentChannelp4;
 
 #[derive(Resource, Component, Default, Clone)]
 struct PlayerChannel;
@@ -661,6 +759,10 @@ pub fn run() {
     app.add_audio_channel::<TurboChannel2p3>();
     app.add_audio_channel::<TurboChannel1p4>();
     app.add_audio_channel::<TurboChannel2p4>();
+    app.add_audio_channel::<EffervescentChannelp1>();
+    app.add_audio_channel::<EffervescentChannelp2>();
+    app.add_audio_channel::<EffervescentChannelp3>();
+    app.add_audio_channel::<EffervescentChannelp4>();
     app.add_audio_channel::<PlayerChannel>();
 
     // cfg_if::cfg_if! {
@@ -673,7 +775,7 @@ pub fn run() {
     app.add_systems(OnEnter(MyAppState::InGame), resetup);
     app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
     app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
-    app.add_systems(OnEnter(MyAppState::InGame), setup_ui);
+    app.add_systems(OnEnter(MyAppState::InGame), play_music);
 
     app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
 
@@ -690,7 +792,12 @@ pub fn run() {
 
     app.add_systems(
         Update,
-        (player_hit_wall, player_hit_player, play_turbo_sound1)
+        (
+            player_hit_wall,
+            player_hit_player,
+            play_turbo_sound1,
+            play_effervescent_sound,
+        )
             .run_if(in_state(MyAppState::InGame)),
     );
 
