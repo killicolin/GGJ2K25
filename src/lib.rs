@@ -14,6 +14,9 @@ use rand::Rng;
 struct Player(u32);
 
 #[derive(Component)]
+struct Bubble;
+
+#[derive(Component)]
 struct Volume(f32);
 
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
@@ -67,6 +70,7 @@ fn spawn_bubble(
 ) {
     if is_colliding {
         commands.spawn((
+            Bubble,
             RigidBody::Dynamic,
             Collider::circle(BUBBLE_RADIUS),
             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
@@ -79,6 +83,7 @@ fn spawn_bubble(
         ));
     } else {
         commands.spawn((
+            Bubble,
             RigidBody::Dynamic,
             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
             Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
@@ -224,6 +229,17 @@ fn update_camera(
 //         .looped();
 // }
 
+fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), (With<Bubble>)>)
+{
+    for (entity, transform) in query.iter()
+    {
+        if transform.translation.y > ARENA_HEIGHT * 0.5
+        {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 pub fn run() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -258,6 +274,11 @@ pub fn run() {
         FixedUpdate,
         (use_turbo, drag_force).run_if(in_state(MyAppState::InGame)),
     );
+
+    app.add_systems(
+        FixedPostUpdate,
+    );
+
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
 
     app.run();
