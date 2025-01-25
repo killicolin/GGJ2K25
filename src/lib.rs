@@ -257,6 +257,9 @@ fn update_camera(
     for player_transform in player_query.iter() {
         interest_area = interest_area.union_point(player_transform.translation.xy());
     }
+
+    // buffer
+    interest_area = interest_area.inflate(interest_area.size().max_element() * CAM_BUFFER);
     let center = interest_area.center();
     let target_position = Vec3::new(center.x, center.y, 0.);
 
@@ -269,17 +272,15 @@ fn update_camera(
         cam_area.min += new_camera_translate.xy();
         cam_area.max += new_camera_translate.xy();
 
-        info!("cam_area {:?}", cam_area);
-
         let mut zoom: f32 = cam.scale;
 
         if cam_area.union(interest_area) != cam_area {
-            zoom *= 1.01;
+            zoom *= 1. + CAM_ZOOM_SPEED;
         }
 
         let inner = cam_area.inflate(-200.);
         if inner.union(interest_area) == inner {
-            zoom *= 0.99;
+            zoom *= 1. - CAM_ZOOM_SPEED;
         }
 
         zoom = zoom.clamp(CAM_ZOOM_MIN, CAM_ZOOM_MAX);

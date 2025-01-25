@@ -11,11 +11,12 @@ pub const NB_TURBO_PARTICLE: usize = 5;
 
 // Camera
 pub const CAM_ELASTICITY: f32 = 0.95;
+pub const CAM_ZOOM_SPEED: f32 = 0.01;
 pub const CAM_ZOOM_MIN: f32 = 0.1; // zoom in
-pub const CAM_ZOOM_MAX: f32 = 10.; // zoom out
+pub const CAM_ZOOM_MAX: f32 = 20.; // zoom out
+pub const CAM_BUFFER: f32 = 0.15; // buffer pct
 
 // Arena
-
 pub const GLASS_RADIUS: f32 = 800.;
 pub const GLASS_HEIGHT: f32 = 1600.;
 pub const GLASS_WIDTH: f32 = 10.;
