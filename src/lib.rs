@@ -4,16 +4,13 @@ use bevy_kira_audio::prelude::*;
 use main_menu::main_menu_plugin::MainMenuPlugin;
 
 use avian2d::prelude::*;
-
+mod constants;
 mod main_menu;
 
+use constants::BUBBLE_RADIUS;
+
 #[derive(Component)]
-enum Player {
-    one,
-    two,
-    three,
-    four,
-}
+struct Player(u32);
 
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
 enum MyAppState {
@@ -40,26 +37,52 @@ fn setup_game(
         MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::ORANGE))),
         Transform::default(),
         ColliderDensity(0.01),
-        Player::one,
+        Player(0),
         ExternalForce::default().with_persistence(false),
     ));
 }
 
 //, mut interaction_query: Query<(&Transform), (With<Player>)>
-fn test_force(
+
+fn spawn_bubble(
+    mut commands: &mut Commands,
+    mut meshes: &mut ResMut<Assets<Mesh>>,
+    mut materials: &mut ResMut<Assets<ColorMaterial>>,
+    transform: Vec3,
+) {
+    commands.spawn((
+        RigidBody::Dynamic,
+        Collider::circle(BUBBLE_RADIUS),
+        Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
+        Transform::from_translation(transform),
+        ColliderDensity(0.0001),
+    ));
+}
+
+fn apply_force(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut cachet_query: Query<(&Transform, &mut ExternalForce), (With<Player>)>,
 ) {
     let amplitude = Vec3::Y * 1000.;
-    let left = Vec3::new(-64., 0., 0.);
-    let right = Vec3::new(64., 0., 0.);
-    let center = Vec3::new(0., 0.1, 0.);
+    let left = Vec3::new(-32., -13., 0.);
+    let right = Vec3::new(32., -13., 0.);
+    let center = Vec3::new(0., 0., 0.);
     for (transform, mut force) in &mut cachet_query {
         if keyboard_input.pressed(KeyCode::KeyA) {
             force.apply_force_at_point(
                 (transform.rotation * amplitude).xy(),
                 (transform.rotation * left).xy(),
                 (transform.rotation * center).xy(),
+            );
+            spawn_bubble(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                (transform.translation + transform.rotation * left),
             );
         }
 
@@ -68,6 +91,12 @@ fn test_force(
                 (transform.rotation * amplitude).xy(),
                 (transform.rotation * right).xy(),
                 (transform.rotation * center).xy(),
+            );
+            spawn_bubble(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                (transform.translation + transform.rotation * right),
             );
         }
     }
@@ -107,7 +136,10 @@ pub fn run() {
 
     app.add_systems(OnEnter(MyAppState::InGame), setup_game);
 
-    app.add_systems(FixedUpdate, test_force.run_if(in_state(MyAppState::InGame)));
+    app.add_systems(
+        FixedUpdate,
+        apply_force.run_if(in_state(MyAppState::InGame)),
+    );
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
 
     app.run();
