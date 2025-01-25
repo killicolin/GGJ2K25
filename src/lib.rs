@@ -277,6 +277,7 @@ pub fn run() {
 
     app.add_systems(
         FixedPostUpdate,
+        (try_kill_bubbles).run_if(in_state(MyAppState::InGame)),
     );
 
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
