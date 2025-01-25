@@ -592,28 +592,22 @@ fn update_health(mut query: Query<(&mut Health, &Transform)>) {
 fn update_ui(
     mut query_players: Query<(&Health, &Player)>,
     mut query_ui_inner: Query<(&mut Node, &HudPlayer), With<HudInnerBar>>,
-    mut query_ui_outer: Query<(&mut Node, &HudPlayer), Without<HudInnerBar>>
+    mut query_ui_outer: Query<(&mut Node, &HudPlayer), Without<HudInnerBar>>,
 ) {
-    for (health, player) in &mut query_players
-    {
-        for (mut node, hudplayer) in &mut query_ui_inner
-        {
-            if hudplayer.0 == player.0
-            {
+    for (health, player) in &mut query_players {
+        for (mut node, hudplayer) in &mut query_ui_inner {
+            if hudplayer.0 == player.0 {
                 let min = 13.;
                 node.width = Val::Percent(min + (100. - min) * health.0 / INITIAL_HEALTH);
             }
 
-            if hudplayer.0 != 0
-            {
+            if hudplayer.0 != 0 {
                 node.display = Display::None;
             }
         }
 
-        for (mut node, hudplayer) in &mut query_ui_outer
-        {
-            if hudplayer.0 != 0
-            {
+        for (mut node, hudplayer) in &mut query_ui_outer {
+            if hudplayer.0 != 0 {
                 node.display = Display::None;
             }
         }
@@ -641,9 +635,7 @@ fn try_kill_by_health(
 }
 
 // kill the player when they are out of the playable area
-fn try_kill_by_zone(
-    mut query: Query<(&mut Health, &Transform), With<Player>>,
-) {
+fn try_kill_by_zone(mut query: Query<(&mut Health, &Transform), With<Player>>) {
     for (mut health, transform) in query.iter_mut() {
         if transform.translation.y < GLASS_HEIGHT * -0.5 {
             health.0 = 0.;
@@ -821,7 +813,13 @@ pub fn run() {
 
     app.add_systems(
         FixedPostUpdate,
-        (update_ui, try_kill_bubbles, try_kill_by_health, try_kill_by_zone).run_if(in_state(MyAppState::InGame)),
+        (
+            update_ui,
+            try_kill_bubbles,
+            try_kill_by_health,
+            try_kill_by_zone,
+        )
+            .run_if(in_state(MyAppState::InGame)),
     );
     app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
 
