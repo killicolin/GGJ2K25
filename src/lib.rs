@@ -776,6 +776,7 @@ pub fn run() {
     app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
     app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
     app.add_systems(OnEnter(MyAppState::InGame), play_music);
+    app.add_systems(OnEnter(MyAppState::InGame), setup_ui);
 
     app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
 
