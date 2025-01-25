@@ -22,4 +22,5 @@ pub const CAM_BUFFER: f32 = 0.15; // buffer pct
 // Arena
 pub const GLASS_RADIUS: f32 = 800.;
 pub const GLASS_HEIGHT: f32 = 1600.;
-pub const GLASS_WIDTH: f32 = 10.;
+pub const WATER_LEVEL: f32 = 1400.;
+pub const GLASS_WIDTH: f32 = 30.;

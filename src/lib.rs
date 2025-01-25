@@ -39,9 +39,9 @@ fn setup_glasses(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let mut water_color = Color::from(bevy::color::palettes::css::LIGHT_YELLOW);
-    water_color.set_alpha(0.7);
+    water_color.set_alpha(0.1);
     let mut glass_color = Color::from(bevy::color::palettes::css::LIGHT_BLUE);
-    glass_color.set_alpha(0.5);
+    glass_color.set_alpha(0.3);
 
     // Background
     commands.spawn((
@@ -53,10 +53,18 @@ fn setup_glasses(
 
     // Arena
     commands.spawn((
-        RigidBody::Static,
-        Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., GLASS_HEIGHT))),
+        Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., WATER_LEVEL))),
         MeshMaterial2d(materials.add(water_color)),
-        Transform::default().with_translation(Vec3::new(0., 0., -1.)),
+        Transform::default().with_translation(Vec3::new(0., (WATER_LEVEL - GLASS_HEIGHT) / 2., 2.)),
+    ));
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., WATER_LEVEL))),
+        MeshMaterial2d(materials.add(water_color)),
+        Transform::default().with_translation(Vec3::new(
+            0.,
+            (WATER_LEVEL - GLASS_HEIGHT) / 2.,
+            -1.,
+        )),
     ));
 
     // Glasses BOTTOM
@@ -124,32 +132,34 @@ fn spawn_bubble(
     initial_speed: f32,
     is_colliding: bool,
 ) {
-    //     if is_colliding {
-    //         commands.spawn((
-    //             Bubble,
-    //             RigidBody::Dynamic,
-    //             Collider::circle(BUBBLE_RADIUS),
-    //             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
-    //             Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
-    //             MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
-    //             Transform::from_translation(transform),
-    //             ColliderDensity(0.05),
-    //             LinearVelocity(direction.xy() * initial_speed),
-    //             ExternalForce::default().with_persistence(false),
-    //         ));
-    //     } else {
-    //         commands.spawn((
-    //             Bubble,
-    //             RigidBody::Dynamic,
-    //             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
-    //             Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
-    //             MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
-    //             Transform::from_translation(transform),
-    //             Mass(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI * 0.05),
-    //             LinearVelocity(direction.xy() * initial_speed),
-    //             ExternalForce::default().with_persistence(false),
-    //         ));
-    //     }
+    let bubble_color = Color::from(bevy::color::palettes::css::ORANGE)
+        .mix(&Color::from(bevy::color::palettes::css::WHITE), 0.5);
+    if is_colliding {
+        commands.spawn((
+            Bubble,
+            RigidBody::Dynamic,
+            Collider::circle(BUBBLE_RADIUS),
+            Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+            Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
+            MeshMaterial2d(materials.add(bubble_color)),
+            Transform::from_translation(transform),
+            ColliderDensity(0.1),
+            LinearVelocity(direction.xy() * initial_speed),
+            ExternalForce::default().with_persistence(false),
+        ));
+    } else {
+        commands.spawn((
+            Bubble,
+            RigidBody::Dynamic,
+            Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+            Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
+            MeshMaterial2d(materials.add(bubble_color)),
+            Transform::from_translation(transform),
+            Mass(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI * 0.1),
+            LinearVelocity(direction.xy() * initial_speed),
+            ExternalForce::default().with_persistence(false),
+        ));
+    }
 }
 
 fn drag_force(
@@ -180,7 +190,7 @@ fn drag_force(
 }
 
 fn is_in_water(translation: &Vec3) -> bool {
-    translation.y <= GLASS_HEIGHT * 0.5
+    translation.y <= (WATER_LEVEL * 0.5 - (GLASS_HEIGHT - WATER_LEVEL) / 2.) - 10.
         && translation.y >= GLASS_HEIGHT * -0.5
         && translation.x >= -GLASS_RADIUS
         && translation.x <= GLASS_RADIUS
@@ -367,11 +377,11 @@ pub fn run() {
     app.add_plugins(MainMenuPlugin);
     app.add_plugins(AudioPlugin);
 
-    cfg_if::cfg_if! {
-        if #[cfg(not(target_arch = "wasm32"))] {
-            app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
-        }
-    }
+    // cfg_if::cfg_if! {
+    //     if #[cfg(not(target_arch = "wasm32"))] {
+    //         app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
+    //     }
+    // }
     app.add_systems(Startup, setup);
 
     app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
