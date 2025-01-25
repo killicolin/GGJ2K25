@@ -7,10 +7,15 @@ use avian2d::prelude::*;
 mod constants;
 mod main_menu;
 
-use constants::BUBBLE_RADIUS;
+use constants::{
+    BUBBLE_EMMISSION_SPEED, BUBBLE_RADIUS, DRAG_COEFFICIENT, FLUID_DENSITY, GRAVITY, TURBO_FORCE,
+};
 
 #[derive(Component)]
 struct Player(u32);
+
+#[derive(Component)]
+struct Volume(f32);
 
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
 enum MyAppState {
@@ -36,8 +41,9 @@ fn setup_game(
         Mesh2d(meshes.add(Rectangle::new(width, height))),
         MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::ORANGE))),
         Transform::default(),
-        ColliderDensity(0.01),
+        ColliderDensity(1.5),
         Player(0),
+        Volume(width * height),
         ExternalForce::default().with_persistence(false),
     ));
 }
@@ -49,25 +55,44 @@ fn spawn_bubble(
     mut meshes: &mut ResMut<Assets<Mesh>>,
     mut materials: &mut ResMut<Assets<ColorMaterial>>,
     transform: Vec3,
+    direction: Vec3,
 ) {
     commands.spawn((
         RigidBody::Dynamic,
         Collider::circle(BUBBLE_RADIUS),
         Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+        Volume(BUBBLE_RADIUS * std::f32::consts::PI),
         MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
         Transform::from_translation(transform),
-        ColliderDensity(0.0001),
+        ColliderDensity(0.05),
+        LinearVelocity(direction.xy() * BUBBLE_EMMISSION_SPEED),
+        ExternalForce::default().with_persistence(false),
     ));
 }
 
-fn apply_force(
+fn drag_force(
+    mut in_water_object: Query<(
+        &Volume,
+        &AngularVelocity,
+        &LinearVelocity,
+        &mut ExternalForce,
+    )>,
+) {
+    for (volume, angular_velocity, linear_velocity, mut force) in &mut in_water_object {
+        let archimede = FLUID_DENSITY * GRAVITY * volume.0 * Vec2::Y;
+        let drag = -DRAG_COEFFICIENT * linear_velocity.0;
+        force.apply_force(archimede + drag);
+    }
+}
+
+fn use_turbo(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut cachet_query: Query<(&Transform, &mut ExternalForce), (With<Player>)>,
 ) {
-    let amplitude = Vec3::Y * 1000.;
+    let amplitude = Vec3::Y * TURBO_FORCE;
     let left = Vec3::new(-32., -13., 0.);
     let right = Vec3::new(32., -13., 0.);
     let center = Vec3::new(0., 0., 0.);
@@ -83,6 +108,7 @@ fn apply_force(
                 &mut meshes,
                 &mut materials,
                 (transform.translation + transform.rotation * left),
+                (transform.rotation * Vec3::NEG_Y),
             );
         }
 
@@ -97,6 +123,7 @@ fn apply_force(
                 &mut meshes,
                 &mut materials,
                 (transform.translation + transform.rotation * right),
+                (transform.rotation * Vec3::NEG_Y),
             );
         }
     }
@@ -138,7 +165,7 @@ pub fn run() {
 
     app.add_systems(
         FixedUpdate,
-        apply_force.run_if(in_state(MyAppState::InGame)),
+        (use_turbo, drag_force).run_if(in_state(MyAppState::InGame)),
     );
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
 
