@@ -10,4 +10,9 @@ pub const TURBO_FORCE: f32 = 2500000.;
 
 // Camera
 pub const CAM_ELASTICITY: f32 = 0.95;
-pub const CAM_ARENA_WEIGHT: f32 = 10.;
+pub const CAM_ZOOM_MIN: f32 = 0.1; // zoom in
+pub const CAM_ZOOM_MAX: f32 = 10.; // zoom out
+
+// Arena
+pub const ARENA_WIDTH: f32 = 800.;
+pub const ARENA_HEIGHT: f32 = 600.;

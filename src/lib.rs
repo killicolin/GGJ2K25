@@ -48,7 +48,7 @@ fn setup_game(
 
     // Arena
     commands.spawn((
-        Mesh2d(meshes.add(Rectangle::new(800., 600.))),
+        Mesh2d(meshes.add(Rectangle::new(ARENA_WIDTH, ARENA_HEIGHT))),
         MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::DARK_GREEN))),
         Transform::default().with_translation(Vec3::new(0., 0., -1.)),
     ));
@@ -167,33 +167,49 @@ fn use_turbo(
 }
 
 fn update_camera(
-    mut camera_query: Query<
-        (&mut Transform, &mut OrthographicProjection),
-        (With<Camera2d>, Without<Player>),
-    >,
-    player_query: Query<&Transform, (With<Player>, Without<Camera2d>)>,
-) {
-    let mut target_translate = Vec3::new(0., 0., 0.);
-    let mut player_count = 0.0;
-    for player_transform in player_query.iter() {
-        target_translate += player_transform.translation;
-        player_count += 1.0;
-        info!("players: {:?}", player_transform);
-    }
-
+    mut camera_query : Query<(&mut Transform, &mut OrthographicProjection), (With<Camera2d>, Without<Player>)>,
+    player_query : Query<&Transform, (With<Player>, Without<Camera2d>)>
+)
+{
     // arena center participation
-    target_translate += CAM_ARENA_WEIGHT * Vec3::default();
-    player_count += CAM_ARENA_WEIGHT; // center of arena take into acount just as a player
+    let mut interest_area = Rect::new(
+        -0.5 * ARENA_WIDTH, -0.5 * ARENA_HEIGHT, 0.5 * ARENA_WIDTH, 0.5 * ARENA_HEIGHT);
 
-    // barycentre
-    target_translate *= 1.0 / player_count;
-
-    for (mut camera_transform, cam) in &mut camera_query {
-        let new_camera_translate = CAM_ELASTICITY * camera_transform.translation
-            + (1.0 - CAM_ELASTICITY) * target_translate;
-        camera_transform.translation = new_camera_translate;
-        info!("Camera: {:?}", cam.area);
+    // players participation
+    for player_transform in player_query.iter()
+    {
+        interest_area = interest_area.union_point(player_transform.translation.xy());
     }
+    let center = interest_area.center();
+    let target_position = Vec3::new(center.x, center.y, 0.);
+
+    for (mut camera_transform, mut cam) in &mut camera_query
+    {
+        let new_camera_translate = CAM_ELASTICITY * camera_transform.translation + (1.0 - CAM_ELASTICITY) * target_position;
+        camera_transform.translation = new_camera_translate;
+
+
+        let mut cam_area = cam.area;
+        cam_area.min += new_camera_translate.xy();
+        cam_area.max += new_camera_translate.xy();
+
+        info!("cam_area {:?}", cam_area);
+
+        let mut zoom: f32 = cam.scale;
+
+        if (cam_area.union(interest_area) != cam_area)
+        {
+            zoom *= 1.01;
+        }
+
+        zoom = zoom.clamp(CAM_ZOOM_MIN, CAM_ZOOM_MAX);
+        cam.scale = zoom;
+        // info!("Camera: {:?}", camera_transform);
+
+        // info!("scale {:?}", cam.scale);
+        // info!("area  {:?}", cam.area);
+    }
+
 }
 
 // fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
