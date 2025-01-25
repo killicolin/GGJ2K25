@@ -274,6 +274,63 @@ fn is_in_water(translation: &Vec3) -> bool {
         && translation.x <= GLASS_RADIUS
 }
 
+fn play_turbo_sound1(
+    asset_server: Res<AssetServer>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    audio1: Res<AudioChannel<TurboChannel1p1>>,
+    audio2: Res<AudioChannel<TurboChannel2p1>>,
+) {
+    if keyboard_input.pressed(KeyCode::KeyD)
+        || keyboard_input.pressed(KeyCode::KeyW)
+        || keyboard_input.pressed(KeyCode::KeyS)
+    {
+        if !audio1.is_playing_sound() {
+            audio1
+                .play(asset_server.load("audio/Sfx_boost1.wav"))
+                .loop_from(1.0);
+        }
+    } else if audio1.is_playing_sound() {
+        audio1.stop();
+    }
+
+    if keyboard_input.pressed(KeyCode::KeyA)
+        || keyboard_input.pressed(KeyCode::KeyW)
+        || keyboard_input.pressed(KeyCode::KeyS)
+    {
+        if !audio2.is_playing_sound() {
+            audio2
+                .play(asset_server.load("audio/Sfx_boost2.wav"))
+                .loop_from(1.0);
+        }
+    } else if audio2.is_playing_sound() {
+        audio2.stop();
+    }
+}
+
+fn play_turbo_sound2(
+    asset_server: Res<AssetServer>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    audio1: Res<AudioChannel<TurboChannel1p2>>,
+    audio2: Res<AudioChannel<TurboChannel2p2>>,
+) {
+}
+
+fn play_turbo_sound3(
+    asset_server: Res<AssetServer>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    audio1: Res<AudioChannel<TurboChannel1p2>>,
+    audio2: Res<AudioChannel<TurboChannel2p2>>,
+) {
+}
+
+fn play_turbo_sound4(
+    asset_server: Res<AssetServer>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    audio1: Res<AudioChannel<TurboChannel1p2>>,
+    audio2: Res<AudioChannel<TurboChannel2p2>>,
+) {
+}
+
 fn use_turbo(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -553,8 +610,24 @@ fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>)
 }
 #[derive(Resource, Component, Default, Clone)]
 struct GlassChannel;
+
 #[derive(Resource, Component, Default, Clone)]
-struct TurboChannel;
+struct TurboChannel1p1;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel2p1;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel1p2;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel2p2;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel1p3;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel2p3;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel1p4;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel2p4;
+
 #[derive(Resource, Component, Default, Clone)]
 struct PlayerChannel;
 
@@ -580,7 +653,14 @@ pub fn run() {
 
     app.add_plugins(AudioPlugin);
     app.add_audio_channel::<GlassChannel>();
-    app.add_audio_channel::<TurboChannel>();
+    app.add_audio_channel::<TurboChannel1p1>();
+    app.add_audio_channel::<TurboChannel2p1>();
+    app.add_audio_channel::<TurboChannel1p2>();
+    app.add_audio_channel::<TurboChannel2p2>();
+    app.add_audio_channel::<TurboChannel1p3>();
+    app.add_audio_channel::<TurboChannel2p3>();
+    app.add_audio_channel::<TurboChannel1p4>();
+    app.add_audio_channel::<TurboChannel2p4>();
     app.add_audio_channel::<PlayerChannel>();
 
     // cfg_if::cfg_if! {
@@ -610,7 +690,8 @@ pub fn run() {
 
     app.add_systems(
         Update,
-        (player_hit_wall, player_hit_player).run_if(in_state(MyAppState::InGame)),
+        (player_hit_wall, player_hit_player, play_turbo_sound1)
+            .run_if(in_state(MyAppState::InGame)),
     );
 
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
