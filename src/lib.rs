@@ -1,18 +1,20 @@
 #![allow(clippy::type_complexity)]
-use bevy::{
-    asset::Assets, prelude::*, sprite::Material2dPlugin, ui::widget::NodeImageMode,
-    window::PresentMode,
-};
+use bevy::{asset::Assets, prelude::*, sprite::Material2dPlugin, window::PresentMode};
 use bevy_kira_audio::prelude::*;
 use cachet_material::CachetMaterial;
+use game_hud::game_hud_plugin::GameHudPlugin;
 use main_menu::main_menu_plugin::MainMenuPlugin;
 
 use avian2d::prelude::*;
 mod cachet_material;
 mod constants;
+mod game_hud;
 mod main_menu;
+mod my_audio;
+mod on_hit;
 
 use constants::*;
+use my_audio::my_audio_plugin::MyAudioPlugin;
 use rand::Rng;
 
 #[derive(Component)]
@@ -157,54 +159,6 @@ fn setup_game_player(
     ));
 }
 
-fn player_hit_player(
-    collisions: Res<Collisions>,
-    mut query: Query<(&LinearVelocity, Entity, &mut Health), (With<Player>)>,
-) {
-    let mut combinations = query.iter_combinations_mut();
-    while let Some([c1, c2]) = combinations.fetch_next() {
-        let (velocity1, e1, mut h1) = c1;
-        let (velocity2, e2, mut h2) = c2;
-        if let Some(player_clash) = collisions.get(e1, e2) {
-            let v1 = velocity1.0.distance(Vec2::default());
-            let v2 = velocity2.0.distance(Vec2::default());
-            let total = v1 + v2;
-            let ratio1 = v1 / total;
-            let ratio1 = v2 / total;
-            println!("{}", total);
-            h1.0 -= f32::min(v2 / 10., 20.);
-            h2.0 -= f32::min(v1 / 10., 20.);
-            // Play Sound
-        }
-    }
-}
-
-fn player_hit_wall(
-    asset_server: Res<AssetServer>,
-    audio: Res<AudioChannel<GlassChannel>>,
-    collisions: Res<Collisions>,
-    mut query_player: Query<(Entity, &LinearVelocity, &mut Health), (With<Player>, Without<Glass>)>,
-    query_glass: Query<Entity, (With<Glass>, Without<Player>)>,
-) {
-    for (entity_player, player_velocity, mut heath) in &mut query_player {
-        for (entity_wall) in &query_glass {
-            if let Some(player_clash) = collisions.get(entity_player, entity_wall) {
-                let v = player_velocity.0.distance(Vec2::default());
-                let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
-                if v > 60. && !audio.is_playing_sound() {
-                    heath.0 -= f32::min((v / 20.), 20.);
-                    audio.play(
-                        asset_server
-                            .load(format!("audio/Sfx_impactglass{}.wav", rng.gen_range(1..=2))),
-                    );
-                }
-            }
-        }
-    }
-}
-
-//, mut interaction_query: Query<(&Transform), (With<Player>)>
-
 fn spawn_bubble(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -273,156 +227,11 @@ fn drag_force(
     }
 }
 
-fn is_in_water(translation: &Vec3) -> bool {
+pub fn is_in_water(translation: &Vec3) -> bool {
     translation.y <= (WATER_LEVEL * 0.5 - (GLASS_HEIGHT - WATER_LEVEL) / 2.) - 10.
         && translation.y >= GLASS_HEIGHT * -0.5
         && translation.x >= -GLASS_RADIUS
         && translation.x <= GLASS_RADIUS
-}
-
-fn play_effervescent_sound(
-    asset_server: Res<AssetServer>,
-    audio1: Res<AudioChannel<EffervescentChannelp1>>,
-    audio2: Res<AudioChannel<EffervescentChannelp2>>,
-    audio3: Res<AudioChannel<EffervescentChannelp3>>,
-    audio4: Res<AudioChannel<EffervescentChannelp4>>,
-    in_water_object: Query<(&Transform, &Player)>,
-) {
-    for (transform, player) in &in_water_object {
-        if is_in_water(&transform.translation) {
-            match player.0 {
-                0 => {
-                    if !audio1.is_playing_sound() {
-                        audio1
-                            .play(asset_server.load("audio/Sfx_effer1.wav"))
-                            .with_volume(0.08)
-                            .looped();
-                    }
-                }
-                1 => {
-                    if !audio2.is_playing_sound() {
-                        audio2
-                            .play(asset_server.load("audio/Sfx_effer2.wav"))
-                            .with_volume(0.08)
-                            .looped();
-                    }
-                }
-                2 => {
-                    if !audio3.is_playing_sound() {
-                        audio3
-                            .play(asset_server.load("audio/Sfx_effer1.wav"))
-                            .with_volume(0.08)
-                            .looped();
-                    }
-                }
-                3 => {
-                    if !audio4.is_playing_sound() {
-                        audio4
-                            .play(asset_server.load("audio/Sfx_effer2.wav"))
-                            .with_volume(0.08)
-                            .looped();
-                    }
-                }
-                _ => (),
-            }
-        } else {
-            match player.0 {
-                0 => {
-                    if audio1.is_playing_sound() {
-                        audio1.stop();
-                    }
-                }
-                1 => {
-                    if audio2.is_playing_sound() {
-                        audio2.stop();
-                    }
-                }
-                2 => {
-                    if audio3.is_playing_sound() {
-                        audio3.stop();
-                    }
-                }
-                3 => {
-                    if audio4.is_playing_sound() {
-                        audio4.stop();
-                    }
-                }
-                _ => (),
-            }
-        }
-    }
-}
-
-fn play_turbo_sound1(
-    asset_server: Res<AssetServer>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    audio: Res<Audio>,
-    audio1: Res<AudioChannel<TurboChannel1p1>>,
-    audio2: Res<AudioChannel<TurboChannel2p1>>,
-    in_water_object: Query<(&Transform, &Player)>,
-) {
-    for (transform, player) in &in_water_object {
-        if is_in_water(&transform.translation) && player.0 == 0 {
-            if keyboard_input.pressed(KeyCode::KeyD)
-                || keyboard_input.pressed(KeyCode::KeyW)
-                || keyboard_input.pressed(KeyCode::KeyS)
-            {
-                if !audio1.is_playing_sound() {
-                    audio.play(asset_server.load("audio/Sfx_boostExplosion.wav"));
-                    audio1
-                        .play(asset_server.load("audio/Sfx_boost1.wav"))
-                        .loop_from(1.0);
-                }
-            } else if audio1.is_playing_sound() {
-                audio1.stop();
-            }
-
-            if keyboard_input.pressed(KeyCode::KeyA)
-                || keyboard_input.pressed(KeyCode::KeyW)
-                || keyboard_input.pressed(KeyCode::KeyS)
-            {
-                if !audio2.is_playing_sound() {
-                    audio.play(asset_server.load("audio/Sfx_boostExplosion.wav"));
-                    audio2
-                        .play(asset_server.load("audio/Sfx_boost2.wav"))
-                        .loop_from(1.0);
-                }
-            } else if audio2.is_playing_sound() {
-                audio2.stop();
-            }
-        } else {
-            if audio2.is_playing_sound() {
-                audio2.stop();
-            }
-            if audio1.is_playing_sound() {
-                audio1.stop();
-            }
-        }
-    }
-}
-
-fn play_turbo_sound2(
-    asset_server: Res<AssetServer>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    audio1: Res<AudioChannel<TurboChannel1p2>>,
-    audio2: Res<AudioChannel<TurboChannel2p2>>,
-) {
-}
-
-fn play_turbo_sound3(
-    asset_server: Res<AssetServer>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    audio1: Res<AudioChannel<TurboChannel1p2>>,
-    audio2: Res<AudioChannel<TurboChannel2p2>>,
-) {
-}
-
-fn play_turbo_sound4(
-    asset_server: Res<AssetServer>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    audio1: Res<AudioChannel<TurboChannel1p2>>,
-    audio2: Res<AudioChannel<TurboChannel2p2>>,
-) {
 }
 
 fn use_turbo(
@@ -574,42 +383,10 @@ fn update_camera(
     }
 }
 
-fn play_music(asset_server: Res<AssetServer>, audio: Res<Audio>) {
-    audio
-        .play(asset_server.load("audio/Music_Les petits effervescents v1.mp3"))
-        .with_volume(2.0)
-        .looped();
-}
-
 fn update_health(mut query: Query<(&mut Health, &Transform)>) {
     for (mut health, transform) in &mut query {
         if is_in_water(&transform.translation) {
             health.0 -= GLOBAL_DAMAGE_SCALE * WATER_TICK_DAMAGE;
-        }
-    }
-}
-
-fn update_ui(
-    mut query_players: Query<(&Health, &Player)>,
-    mut query_ui_inner: Query<(&mut Node, &HudPlayer), With<HudInnerBar>>,
-    mut query_ui_outer: Query<(&mut Node, &HudPlayer), Without<HudInnerBar>>,
-) {
-    for (health, player) in &mut query_players {
-        for (mut node, hudplayer) in &mut query_ui_inner {
-            if hudplayer.0 == player.0 {
-                let min = 13.;
-                node.width = Val::Percent(min + (100. - min) * health.0 / INITIAL_HEALTH);
-            }
-
-            if hudplayer.0 != 0 {
-                node.display = Display::None;
-            }
-        }
-
-        for (mut node, hudplayer) in &mut query_ui_outer {
-            if hudplayer.0 != 0 {
-                node.display = Display::None;
-            }
         }
     }
 }
@@ -644,115 +421,11 @@ fn try_kill_by_zone(mut query: Query<(&mut Health, &Transform), With<Player>>) {
     }
 }
 
-fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let image_outer_bar = asset_server.load("sprite/bar_outer.png");
-    let image_inner_bar = asset_server.load("sprite/bar_inner.png");
-
-    let slicer = TextureSlicer {
-        border: BorderRect::square(64.0),
-        center_scale_mode: SliceScaleMode::Stretch,
-        sides_scale_mode: SliceScaleMode::Stretch,
-        max_corner_scale: 1.0,
-    };
-    commands
-        .spawn((
-            InGame,
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(12.0),
-                top: Val::Percent(86.0),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::SpaceEvenly,
-                ..default()
-            },
-        ))
-        .with_children(|parent| {
-            for (w, h, tag) in [
-                (20.0, 32.0, HudPlayer(0)),
-                (20.0, 32.0, HudPlayer(1)),
-                (20.0, 32.0, HudPlayer(2)),
-                (20.0, 32.0, HudPlayer(3)),
-            ] {
-                parent
-                    .spawn((
-                        InGame,
-                        tag.clone(),
-                        ImageNode {
-                            image: image_outer_bar.clone(),
-                            image_mode: NodeImageMode::Sliced(slicer.clone()),
-                            ..default()
-                        },
-                        Node {
-                            width: Val::Vw(w),
-                            height: Val::Px(h),
-                            // horizontally center child text
-                            justify_content: JustifyContent::Start,
-                            // vertically center child text
-                            align_items: AlignItems::Center,
-                            margin: UiRect::all(Val::Px(20.0)),
-                            ..default()
-                        },
-                    ))
-                    .with_child((
-                        InGame,
-                        HudInnerBar,
-                        tag,
-                        ImageNode {
-                            image: image_inner_bar.clone(),
-                            image_mode: NodeImageMode::Sliced(slicer.clone()),
-                            ..default()
-                        },
-                        Node {
-                            width: Val::Percent(100.),
-                            height: Val::Percent(100.),
-                            // horizontally center child text
-                            justify_content: JustifyContent::Center,
-                            // vertically center child text
-                            align_items: AlignItems::Center,
-                            // margin: UiRect::all(Val::Px(20.0)),
-                            ..default()
-                        },
-                    ));
-            }
-        });
-}
-
 fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>) {
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
 }
-#[derive(Resource, Component, Default, Clone)]
-struct GlassChannel;
-
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel1p1;
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel2p1;
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel1p2;
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel2p2;
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel1p3;
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel2p3;
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel1p4;
-#[derive(Resource, Component, Default, Clone)]
-struct TurboChannel2p4;
-
-#[derive(Resource, Component, Default, Clone)]
-struct EffervescentChannelp1;
-#[derive(Resource, Component, Default, Clone)]
-struct EffervescentChannelp2;
-#[derive(Resource, Component, Default, Clone)]
-struct EffervescentChannelp3;
-#[derive(Resource, Component, Default, Clone)]
-struct EffervescentChannelp4;
-
-#[derive(Resource, Component, Default, Clone)]
-struct PlayerChannel;
 
 pub fn run() {
     let mut app = App::new();
@@ -775,20 +448,8 @@ pub fn run() {
     app.add_plugins(MainMenuPlugin);
 
     app.add_plugins(AudioPlugin);
-    app.add_audio_channel::<GlassChannel>();
-    app.add_audio_channel::<TurboChannel1p1>();
-    app.add_audio_channel::<TurboChannel2p1>();
-    app.add_audio_channel::<TurboChannel1p2>();
-    app.add_audio_channel::<TurboChannel2p2>();
-    app.add_audio_channel::<TurboChannel1p3>();
-    app.add_audio_channel::<TurboChannel2p3>();
-    app.add_audio_channel::<TurboChannel1p4>();
-    app.add_audio_channel::<TurboChannel2p4>();
-    app.add_audio_channel::<EffervescentChannelp1>();
-    app.add_audio_channel::<EffervescentChannelp2>();
-    app.add_audio_channel::<EffervescentChannelp3>();
-    app.add_audio_channel::<EffervescentChannelp4>();
-    app.add_audio_channel::<PlayerChannel>();
+    app.add_plugins(MyAudioPlugin);
+    app.add_plugins(GameHudPlugin);
 
     // cfg_if::cfg_if! {
     //     if #[cfg(not(target_arch = "wasm32"))] {
@@ -800,9 +461,6 @@ pub fn run() {
     app.add_systems(OnEnter(MyAppState::InGame), resetup);
     app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
     app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
-    app.add_systems(OnEnter(MyAppState::InGame), setup_ui);
-    app.add_systems(OnEnter(MyAppState::InGame), play_music);
-    app.add_systems(OnEnter(MyAppState::InGame), setup_ui);
 
     app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
 
@@ -813,28 +471,10 @@ pub fn run() {
 
     app.add_systems(
         FixedPostUpdate,
-        (
-            update_ui,
-            try_kill_bubbles,
-            try_kill_by_health,
-            try_kill_by_zone,
-        )
+        (try_kill_bubbles, try_kill_by_health, try_kill_by_zone)
             .run_if(in_state(MyAppState::InGame)),
     );
     app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
-
-    app.add_systems(
-        Update,
-        (
-            player_hit_wall,
-            player_hit_player,
-            play_turbo_sound1,
-            play_effervescent_sound,
-        )
-            .run_if(in_state(MyAppState::InGame)),
-    );
-
-    // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
 
     app.run();
 }
