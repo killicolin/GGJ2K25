@@ -1,5 +1,5 @@
 #![allow(clippy::type_complexity)]
-use bevy::{asset::Assets, prelude::*, sprite::Material2dPlugin, window::PresentMode};
+use bevy::{asset::Assets, ecs::entity, prelude::*, sprite::Material2dPlugin, window::PresentMode};
 use bevy_kira_audio::prelude::*;
 use cachet_material::CachetMaterial;
 use main_menu::main_menu_plugin::MainMenuPlugin;
@@ -25,6 +25,9 @@ struct Health(f32);
 struct Bubble;
 
 #[derive(Component)]
+struct Glass;
+
+#[derive(Component)]
 struct Volume(f32);
 
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
@@ -38,9 +41,8 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-fn resetup(mut commands: Commands, query : Query<Entity, With<Camera2d>>) {
-    for entity in query.iter()
-    {
+fn resetup(mut commands: Commands, query: Query<Entity, With<Camera2d>>) {
+    for entity in query.iter() {
         commands.entity(entity).despawn();
     }
     commands.spawn(Camera2d);
@@ -92,6 +94,7 @@ fn setup_glasses(
         Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., GLASS_WIDTH))),
         MeshMaterial2d(materials.add(glass_color)),
         Transform::default().with_translation(Vec3::new(0., -GLASS_HEIGHT / 2., 0.)),
+        Glass,
     ));
 
     // Glasses LEFT
@@ -102,6 +105,7 @@ fn setup_glasses(
         Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
         MeshMaterial2d(materials.add(glass_color)),
         Transform::default().with_translation(Vec3::new(-GLASS_RADIUS, 0., 0.)),
+        Glass,
     ));
 
     // Glasses RIGHT
@@ -112,6 +116,7 @@ fn setup_glasses(
         Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
         MeshMaterial2d(materials.add(glass_color)),
         Transform::default().with_translation(Vec3::new(GLASS_RADIUS, 0., 0.)),
+        Glass,
     ));
 }
 
@@ -141,6 +146,48 @@ fn setup_game_player(
         Volume(width * height),
         ExternalForce::default().with_persistence(false),
     ));
+}
+
+fn player_hit_player(
+    collisions: Res<Collisions>,
+    query: Query<(&LinearVelocity, Entity), (With<Player>)>,
+) {
+    query
+        .iter_combinations()
+        .for_each(|[(velocity1, e1), (velocity2, e2)]| {
+            if let Some(player_clash) = collisions.get(e1, e2) {
+                let v1 = velocity1.0.distance_squared(Vec2::default());
+                let v2 = velocity2.0.distance_squared(Vec2::default());
+                let total = v1 + v2;
+                let ratio1 = v1 / total;
+                let ratio1 = v2 / total;
+                //todo health impact
+                //player_clash.total_normal_impulse
+            }
+        });
+}
+
+fn player_hit_wall(
+    asset_server: Res<AssetServer>,
+    audio: Res<AudioChannel<GlassChannel>>,
+    collisions: Res<Collisions>,
+    query_player: Query<(Entity, &LinearVelocity), (With<Player>, Without<Glass>)>,
+    query_glass: Query<Entity, (With<Glass>, Without<Player>)>,
+) {
+    for (entity_player, player_velocity) in &query_player {
+        for (entity_wall) in &query_glass {
+            if let Some(player_clash) = collisions.get(entity_player, entity_wall) {
+                let v = player_velocity.0.distance_squared(Vec2::default());
+                let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+                if v > 1000. && !audio.is_playing_sound() {
+                    audio.play(
+                        asset_server
+                            .load(format!("audio/Sfx_impactglass{}.wav", rng.gen_range(1..=2))),
+                    );
+                }
+            }
+        }
+    }
 }
 
 //, mut interaction_query: Query<(&Transform), (With<Player>)>
@@ -376,9 +423,8 @@ fn update_camera(
 // }
 
 fn update_health(mut query: Query<(&mut Health, &Transform)>) {
-    for (mut health, transform) in &mut query{
-        if is_in_water(&transform.translation)
-        {
+    for (mut health, transform) in &mut query {
+        if is_in_water(&transform.translation) {
             health.0 -= GLOBAL_DAMAGE_SCALE * WATER_TICK_DAMAGE;
         }
     }
@@ -392,26 +438,29 @@ fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), W
     }
 }
 
-fn try_kill_by_health(mut app_state: ResMut<NextState<MyAppState>>,
-    query: Query<&Health, With<Player>>)
-{
+fn try_kill_by_health(
+    mut app_state: ResMut<NextState<MyAppState>>,
+    query: Query<&Health, With<Player>>,
+) {
     for health in query.iter() {
-        if health.0 < 0.
-        {
+        if health.0 < 0. {
             warn!("health depleted: {:?}", health);
             app_state.set(MyAppState::MainMenu);
         }
     }
 }
 
-
-fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>)
-{
-    for entity in query.iter()
-    {
+fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>) {
+    for entity in query.iter() {
         commands.entity(entity).despawn();
     }
 }
+#[derive(Resource, Component, Default, Clone)]
+struct GlassChannel;
+#[derive(Resource, Component, Default, Clone)]
+struct TurboChannel;
+#[derive(Resource, Component, Default, Clone)]
+struct PlayerChannel;
 
 pub fn run() {
     let mut app = App::new();
@@ -432,7 +481,11 @@ pub fn run() {
     app.add_plugins(Material2dPlugin::<CachetMaterial>::default());
     app.add_plugins(PhysicsPlugins::default());
     app.add_plugins(MainMenuPlugin);
+
     app.add_plugins(AudioPlugin);
+    app.add_audio_channel::<GlassChannel>();
+    app.add_audio_channel::<TurboChannel>();
+    app.add_audio_channel::<PlayerChannel>();
 
     // cfg_if::cfg_if! {
     //     if #[cfg(not(target_arch = "wasm32"))] {
@@ -456,6 +509,11 @@ pub fn run() {
         (try_kill_bubbles, try_kill_by_health).run_if(in_state(MyAppState::InGame)),
     );
     app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
+
+    app.add_systems(
+        Update,
+        (player_hit_wall, player_hit_player).run_if(in_state(MyAppState::InGame)),
+    );
 
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
 
