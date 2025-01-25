@@ -8,6 +8,7 @@ mod constants;
 mod main_menu;
 
 use constants::*;
+use rand::Rng;
 
 #[derive(Component)]
 struct Player(u32);
@@ -49,7 +50,7 @@ fn setup_game(
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::new(800., 600.))),
         MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::DARK_GREEN))),
-        Transform::default().with_translation(Vec3::new(0.,0.,-1.)),
+        Transform::default().with_translation(Vec3::new(0., 0., -1.)),
     ));
 }
 
@@ -61,29 +62,37 @@ fn spawn_bubble(
     mut materials: &mut ResMut<Assets<ColorMaterial>>,
     transform: Vec3,
     direction: Vec3,
+    initial_speed: f32,
+    is_colliding: bool,
 ) {
-    commands.spawn((
-        RigidBody::Dynamic,
-        Collider::circle(BUBBLE_RADIUS),
-        Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
-        Volume(BUBBLE_RADIUS * std::f32::consts::PI),
-        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
-        Transform::from_translation(transform),
-        ColliderDensity(0.05),
-        LinearVelocity(direction.xy() * BUBBLE_EMMISSION_SPEED),
-        ExternalForce::default().with_persistence(false),
-    ));
+    if is_colliding {
+        commands.spawn((
+            RigidBody::Dynamic,
+            Collider::circle(BUBBLE_RADIUS),
+            Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+            Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
+            MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
+            Transform::from_translation(transform),
+            ColliderDensity(0.05),
+            LinearVelocity(direction.xy() * initial_speed),
+            ExternalForce::default().with_persistence(false),
+        ));
+    } else {
+        commands.spawn((
+            RigidBody::Dynamic,
+            Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+            Volume(BUBBLE_RADIUS * std::f32::consts::PI),
+            MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
+            Transform::from_translation(transform),
+            Mass(BUBBLE_RADIUS * 2. * std::f32::consts::PI * 0.05),
+            LinearVelocity(direction.xy() * initial_speed),
+            ExternalForce::default().with_persistence(false),
+        ));
+    }
 }
 
-fn drag_force(
-    mut in_water_object: Query<(
-        &Volume,
-        &AngularVelocity,
-        &LinearVelocity,
-        &mut ExternalForce,
-    )>,
-) {
-    for (volume, angular_velocity, linear_velocity, mut force) in &mut in_water_object {
+fn drag_force(mut in_water_object: Query<(&Volume, &LinearVelocity, &mut ExternalForce)>) {
+    for (volume, linear_velocity, mut force) in &mut in_water_object {
         let archimede = FLUID_DENSITY * GRAVITY * volume.0 * Vec2::Y;
         let drag = -DRAG_COEFFICIENT * linear_velocity.0;
         force.apply_force(archimede + drag);
@@ -97,6 +106,8 @@ fn use_turbo(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut cachet_query: Query<(&Transform, &mut ExternalForce), (With<Player>)>,
 ) {
+    let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+    rng.gen_range(-60. ..4.);
     let amplitude = Vec3::Y * TURBO_FORCE;
     let left = Vec3::new(-32., -13., 0.);
     let right = Vec3::new(32., -13., 0.);
@@ -108,12 +119,17 @@ fn use_turbo(
                 (transform.rotation * left).xy(),
                 (transform.rotation * center).xy(),
             );
+            let is_colliding = rng.gen_bool(0.5);
+            let pos = if is_colliding { 0. } else { 1. };
             spawn_bubble(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
-                (transform.translation + transform.rotation * left),
+                transform.translation
+                    + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
                 (transform.rotation * Vec3::NEG_Y),
+                BUBBLE_EMMISSION_SPEED * (1. - pos),
+                is_colliding,
             );
         }
 
@@ -123,26 +139,43 @@ fn use_turbo(
                 (transform.rotation * right).xy(),
                 (transform.rotation * center).xy(),
             );
+            let is_colliding = rng.gen_bool(0.5);
+            let pos = if is_colliding { 0. } else { 1. };
             spawn_bubble(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
-                (transform.translation + transform.rotation * right),
+                transform.translation
+                    + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
                 (transform.rotation * Vec3::NEG_Y),
+                BUBBLE_EMMISSION_SPEED * (1. - pos),
+                is_colliding,
             );
         }
+        spawn_bubble(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            transform.translation
+                + transform.rotation
+                    * Vec3::new(rng.gen_range(-60. ..60.), rng.gen_range(-12. ..12.), 1.),
+            (transform.rotation * Vec3::NEG_Y),
+            0.,
+            false,
+        );
     }
 }
 
 fn update_camera(
-    mut camera_query : Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
-    player_query : Query<&Transform, (With<Player>, Without<Camera2d>)>
-)
-{
-    let mut target_translate = Vec3::new(0.,0.,0.);
+    mut camera_query: Query<
+        (&mut Transform, &mut OrthographicProjection),
+        (With<Camera2d>, Without<Player>),
+    >,
+    player_query: Query<&Transform, (With<Player>, Without<Camera2d>)>,
+) {
+    let mut target_translate = Vec3::new(0., 0., 0.);
     let mut player_count = 0.0;
-    for player_transform in player_query.iter()
-    {
+    for player_transform in player_query.iter() {
         target_translate += player_transform.translation;
         player_count += 1.0;
         info!("players: {:?}", player_transform);
@@ -155,14 +188,13 @@ fn update_camera(
     // barycentre
     target_translate *= 1.0 / player_count;
 
-    for mut camera_transform in &mut camera_query
-    {
-        let new_camera_translate = CAM_ELASTICITY * camera_transform.translation + (1.0 - CAM_ELASTICITY) * target_translate;
+    for (mut camera_transform, cam) in &mut camera_query {
+        let new_camera_translate = CAM_ELASTICITY * camera_transform.translation
+            + (1.0 - CAM_ELASTICITY) * target_translate;
         camera_transform.translation = new_camera_translate;
-        info!("Camera: {:?}", camera_transform);
+        info!("Camera: {:?}", cam.area);
     }
 }
-
 
 // fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
 //     audio
@@ -184,6 +216,7 @@ pub fn run() {
         ..default()
     }));
     app.init_state::<MyAppState>();
+    app.insert_resource(Gravity(Vec2::NEG_Y * GRAVITY * GRAVITY_SCALE));
 
     app.add_plugins(PhysicsPlugins::default());
     app.add_plugins(MainMenuPlugin);
