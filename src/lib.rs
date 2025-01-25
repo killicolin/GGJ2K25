@@ -142,7 +142,7 @@ fn drag_force(
     mut in_water_object: Query<(&Transform, &Volume, &LinearVelocity, &mut ExternalForce)>,
 ) {
     for (transform, volume, linear_velocity, mut force) in &mut in_water_object {
-        if transform.translation.y <= GLASS_HEIGHT * 0.5 {
+        if is_in_water(&transform.translation) {
             let archimede = FLUID_DENSITY * GRAVITY * volume.0 * Vec2::Y;
             let drag = -DRAG_COEFFICIENT * linear_velocity.0;
             force.apply_force(archimede + drag);
