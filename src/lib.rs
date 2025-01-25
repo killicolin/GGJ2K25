@@ -130,11 +130,15 @@ fn spawn_bubble(
     }
 }
 
-fn drag_force(mut in_water_object: Query<(&Volume, &LinearVelocity, &mut ExternalForce)>) {
-    for (volume, linear_velocity, mut force) in &mut in_water_object {
-        let archimede = FLUID_DENSITY * GRAVITY * volume.0 * Vec2::Y;
-        let drag = -DRAG_COEFFICIENT * linear_velocity.0;
-        force.apply_force(archimede + drag);
+fn drag_force(
+    mut in_water_object: Query<(&Transform, &Volume, &LinearVelocity, &mut ExternalForce)>,
+) {
+    for (transform, volume, linear_velocity, mut force) in &mut in_water_object {
+        if transform.translation.y <= GLASS_HEIGHT * 0.5 {
+            let archimede = FLUID_DENSITY * GRAVITY * volume.0 * Vec2::Y;
+            let drag = -DRAG_COEFFICIENT * linear_velocity.0;
+            force.apply_force(archimede + drag);
+        }
     }
 }
 
@@ -148,65 +152,89 @@ fn use_turbo(
     let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
     rng.gen_range(-60. ..4.);
     let amplitude = Vec3::Y * TURBO_FORCE;
-    let left = Vec3::new(-32., -13., 0.);
-    let right = Vec3::new(32., -13., 0.);
+    let left_bottom = Vec3::new(-32., -13., 0.);
+    let right_bottom = Vec3::new(32., -13., 0.);
+    let top = Vec3::new(0., 13., 0.);
     let center = Vec3::new(0., 0., 0.);
     for (transform, mut force) in &mut cachet_query {
-        if keyboard_input.pressed(KeyCode::KeyD) {
-            force.apply_force_at_point(
-                (transform.rotation * amplitude).xy(),
-                (transform.rotation * left).xy(),
-                (transform.rotation * center).xy(),
-            );
-            let is_colliding = rng.gen_bool(0.7);
-            let pos = if is_colliding { 0. } else { 1. };
-            for _ in 1..NB_TURBO_PARTICLE {
-                spawn_bubble(
-                    &mut commands,
-                    &mut meshes,
-                    &mut materials,
-                    transform.translation
-                        + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
-                    (transform.rotation * Vec3::NEG_Y),
-                    BUBBLE_EMMISSION_SPEED * (1. - pos),
-                    is_colliding,
+        if transform.translation.y <= GLASS_HEIGHT * 0.5 {
+            if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::KeyW) {
+                force.apply_force_at_point(
+                    (transform.rotation * amplitude).xy(),
+                    (transform.rotation * left_bottom).xy(),
+                    (transform.rotation * center).xy(),
                 );
+                let is_colliding = rng.gen_bool(0.7);
+                let pos = if is_colliding { 0. } else { 1. };
+                for _ in 1..NB_TURBO_PARTICLE {
+                    spawn_bubble(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        transform.translation
+                            + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
+                        (transform.rotation * Vec3::NEG_Y),
+                        BUBBLE_EMMISSION_SPEED * (1. - pos),
+                        is_colliding,
+                    );
+                }
             }
-        }
-
-        if keyboard_input.pressed(KeyCode::KeyA) {
-            force.apply_force_at_point(
-                (transform.rotation * amplitude).xy(),
-                (transform.rotation * right).xy(),
-                (transform.rotation * center).xy(),
-            );
-            let is_colliding = rng.gen_bool(0.7);
-            let pos = if is_colliding { 0. } else { 1. };
-
-            for _ in 1..NB_TURBO_PARTICLE {
-                spawn_bubble(
-                    &mut commands,
-                    &mut meshes,
-                    &mut materials,
-                    transform.translation
-                        + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
-                    (transform.rotation * Vec3::NEG_Y),
-                    BUBBLE_EMMISSION_SPEED * (1. - pos),
-                    is_colliding,
+            if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::KeyW) {
+                force.apply_force_at_point(
+                    (transform.rotation * amplitude).xy(),
+                    (transform.rotation * right_bottom).xy(),
+                    (transform.rotation * center).xy(),
                 );
+                let is_colliding = rng.gen_bool(0.7);
+                let pos = if is_colliding { 0. } else { 1. };
+
+                for _ in 1..NB_TURBO_PARTICLE {
+                    spawn_bubble(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        transform.translation
+                            + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
+                        (transform.rotation * Vec3::NEG_Y),
+                        BUBBLE_EMMISSION_SPEED * (1. - pos),
+                        is_colliding,
+                    );
+                }
             }
+            if keyboard_input.pressed(KeyCode::KeyS) {
+                force.apply_force_at_point(
+                    (transform.rotation * -amplitude).xy(),
+                    (transform.rotation * top).xy(),
+                    (transform.rotation * center).xy(),
+                );
+                let is_colliding = rng.gen_bool(0.7);
+                let pos = if is_colliding { 0. } else { 1. };
+
+                for _ in 1..NB_TURBO_PARTICLE * 2 {
+                    spawn_bubble(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        transform.translation
+                            + transform.rotation * Vec3::new(rng.gen_range(-60. ..60.), 13., pos),
+                        (transform.rotation * Vec3::NEG_Y),
+                        BUBBLE_EMMISSION_SPEED * (1. - pos),
+                        is_colliding,
+                    );
+                }
+            }
+            spawn_bubble(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                transform.translation
+                    + transform.rotation
+                        * Vec3::new(rng.gen_range(-60. ..60.), rng.gen_range(-12. ..12.), 1.),
+                (transform.rotation * Vec3::NEG_Y),
+                0.,
+                false,
+            );
         }
-        spawn_bubble(
-            &mut commands,
-            &mut meshes,
-            &mut materials,
-            transform.translation
-                + transform.rotation
-                    * Vec3::new(rng.gen_range(-60. ..60.), rng.gen_range(-12. ..12.), 1.),
-            (transform.rotation * Vec3::NEG_Y),
-            0.,
-            false,
-        );
     }
 }
 
