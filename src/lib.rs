@@ -179,7 +179,7 @@ fn use_turbo(
                     (transform.rotation * left_bottom).xy(),
                     (transform.rotation * center).xy(),
                 );
-                let is_colliding = rng.gen_bool(0.7);
+                let is_colliding = rng.gen_bool(0.3);
                 let pos = if is_colliding { 0. } else { 1. };
                 for _ in 1..NB_TURBO_PARTICLE {
                     spawn_bubble(
@@ -200,7 +200,7 @@ fn use_turbo(
                     (transform.rotation * right_bottom).xy(),
                     (transform.rotation * center).xy(),
                 );
-                let is_colliding = rng.gen_bool(0.7);
+                let is_colliding = rng.gen_bool(0.3);
                 let pos = if is_colliding { 0. } else { 1. };
 
                 for _ in 1..NB_TURBO_PARTICLE {
@@ -311,7 +311,7 @@ fn update_camera(
 
 fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), With<Bubble>>) {
     for (entity, transform) in query.iter() {
-        if ! is_in_water(&transform.translation) {
+        if !is_in_water(&transform.translation) {
             commands.entity(entity).despawn();
         }
     }
