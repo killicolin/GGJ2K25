@@ -113,7 +113,7 @@ fn use_turbo(
     let right = Vec3::new(32., -13., 0.);
     let center = Vec3::new(0., 0., 0.);
     for (transform, mut force) in &mut cachet_query {
-        if keyboard_input.pressed(KeyCode::KeyA) {
+        if keyboard_input.pressed(KeyCode::KeyD) {
             force.apply_force_at_point(
                 (transform.rotation * amplitude).xy(),
                 (transform.rotation * left).xy(),
@@ -135,7 +135,7 @@ fn use_turbo(
             }
         }
 
-        if keyboard_input.pressed(KeyCode::KeyD) {
+        if keyboard_input.pressed(KeyCode::KeyA) {
             force.apply_force_at_point(
                 (transform.rotation * amplitude).xy(),
                 (transform.rotation * right).xy(),
