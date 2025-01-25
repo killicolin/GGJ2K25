@@ -1,9 +1,11 @@
 #![allow(clippy::type_complexity)]
-use bevy::{asset::Assets, prelude::*, window::PresentMode};
+use bevy::{asset::Assets, prelude::*, sprite::Material2dPlugin, window::PresentMode};
 use bevy_kira_audio::prelude::*;
+use cachet_material::CachetMaterial;
 use main_menu::main_menu_plugin::MainMenuPlugin;
 
 use avian2d::prelude::*;
+mod cachet_material;
 mod constants;
 mod main_menu;
 
@@ -73,16 +75,22 @@ fn setup_glasses(
 
 fn setup_game_player(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<CachetMaterial>>,
 ) {
     let width = 1.0 * 128.;
     let height = 0.2 * 128.;
+    let img = asset_server.load("sprite/Cachet.png");
+    let material_asset = materials.add(CachetMaterial {
+        color: Color::from(bevy::color::palettes::css::ORANGE).to_linear(),
+        color_texture: Some(img),
+    });
     commands.spawn((
         RigidBody::Dynamic,
         Collider::rectangle(width, height),
         Mesh2d(meshes.add(Rectangle::new(width, height))),
-        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::ORANGE))),
+        MeshMaterial2d(material_asset),
         Transform::default(),
         ColliderDensity(1.5),
         Player(0),
@@ -325,6 +333,7 @@ pub fn run() {
     app.init_state::<MyAppState>();
     app.insert_resource(Gravity(Vec2::NEG_Y * GRAVITY * GRAVITY_SCALE));
 
+    app.add_plugins(Material2dPlugin::<CachetMaterial>::default());
     app.add_plugins(PhysicsPlugins::default());
     app.add_plugins(MainMenuPlugin);
     app.add_plugins(AudioPlugin);
