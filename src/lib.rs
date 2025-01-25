@@ -21,8 +21,11 @@ struct InGame;
 #[derive(Component)]
 struct Player(u32);
 
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 struct HudPlayer(u32);
+
+#[derive(Component, Copy, Clone)]
+struct HudInnerBar;
 
 #[derive(Component, Debug)]
 struct Health(f32);
@@ -588,13 +591,30 @@ fn update_health(mut query: Query<(&mut Health, &Transform)>) {
 
 fn update_ui(
     mut query_players: Query<(&Health, &Player)>,
-    mut query_ui: Query<(&mut Node, &HudPlayer)>,
+    mut query_ui_inner: Query<(&mut Node, &HudPlayer), With<HudInnerBar>>,
+    mut query_ui_outer: Query<(&mut Node, &HudPlayer), Without<HudInnerBar>>
 ) {
-    for (health, player) in &mut query_players {
-        for (mut node, hudplayer) in &mut query_ui {
-            if hudplayer.0 == player.0 {
+    for (health, player) in &mut query_players
+    {
+        for (mut node, hudplayer) in &mut query_ui_inner
+        {
+            if hudplayer.0 == player.0
+            {
                 let min = 13.;
                 node.width = Val::Percent(min + (100. - min) * health.0 / INITIAL_HEALTH);
+            }
+
+            if hudplayer.0 != 0
+            {
+                node.display = Display::None;
+            }
+        }
+
+        for (mut node, hudplayer) in &mut query_ui_outer
+        {
+            if hudplayer.0 != 0
+            {
+                node.display = Display::None;
             }
         }
     }
@@ -613,9 +633,21 @@ fn try_kill_by_health(
     query: Query<&Health, With<Player>>,
 ) {
     for health in query.iter() {
-        if health.0 < 0. {
+        if health.0 <= 0. {
             warn!("health depleted: {:?}", health);
             app_state.set(MyAppState::MainMenu);
+        }
+    }
+}
+
+// kill the player when they are out of the playable area
+fn try_kill_by_zone(
+    mut query: Query<(&mut Health, &Transform), With<Player>>,
+) {
+    for (mut health, transform) in query.iter_mut() {
+        if transform.translation.y < GLASS_HEIGHT * -0.5 {
+            health.0 = 0.;
+            warn!("player left the area like a wuss");
         }
     }
 }
@@ -644,15 +676,15 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         ))
         .with_children(|parent| {
             for (w, h, tag) in [
-                (100.0, 32.0, HudPlayer(0)),
-                (100.0, 32.0, HudPlayer(1)),
-                (100.0, 32.0, HudPlayer(2)),
-                (100.0, 32.0, HudPlayer(3)),
+                (20.0, 32.0, HudPlayer(0)),
+                (20.0, 32.0, HudPlayer(1)),
+                (20.0, 32.0, HudPlayer(2)),
+                (20.0, 32.0, HudPlayer(3)),
             ] {
                 parent
                     .spawn((
                         InGame,
-                        Button,
+                        tag.clone(),
                         ImageNode {
                             image: image_outer_bar.clone(),
                             image_mode: NodeImageMode::Sliced(slicer.clone()),
@@ -671,6 +703,7 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ))
                     .with_child((
                         InGame,
+                        HudInnerBar,
                         tag,
                         ImageNode {
                             image: image_inner_bar.clone(),
@@ -775,6 +808,7 @@ pub fn run() {
     app.add_systems(OnEnter(MyAppState::InGame), resetup);
     app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
     app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
+    app.add_systems(OnEnter(MyAppState::InGame), setup_ui);
     app.add_systems(OnEnter(MyAppState::InGame), play_music);
 
     app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
@@ -786,7 +820,7 @@ pub fn run() {
 
     app.add_systems(
         FixedPostUpdate,
-        (update_ui, try_kill_bubbles, try_kill_by_health).run_if(in_state(MyAppState::InGame)),
+        (update_ui, try_kill_bubbles, try_kill_by_health, try_kill_by_zone).run_if(in_state(MyAppState::InGame)),
     );
     app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
 
