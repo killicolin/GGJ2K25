@@ -7,9 +7,7 @@ use avian2d::prelude::*;
 mod constants;
 mod main_menu;
 
-use constants::{
-    BUBBLE_EMMISSION_SPEED, BUBBLE_RADIUS, DRAG_COEFFICIENT, FLUID_DENSITY, GRAVITY, TURBO_FORCE,
-};
+use constants::*;
 
 #[derive(Component)]
 struct Player(u32);
@@ -45,6 +43,13 @@ fn setup_game(
         Player(0),
         Volume(width * height),
         ExternalForce::default().with_persistence(false),
+    ));
+
+    // Arena
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(800., 600.))),
+        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::DARK_GREEN))),
+        Transform::default().with_translation(Vec3::new(0.,0.,-1.)),
     ));
 }
 
@@ -129,6 +134,36 @@ fn use_turbo(
     }
 }
 
+fn update_camera(
+    mut camera_query : Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+    player_query : Query<&Transform, (With<Player>, Without<Camera2d>)>
+)
+{
+    let mut target_translate = Vec3::new(0.,0.,0.);
+    let mut player_count = 0.0;
+    for player_transform in player_query.iter()
+    {
+        target_translate += player_transform.translation;
+        player_count += 1.0;
+        info!("players: {:?}", player_transform);
+    }
+
+    // arena center participation
+    target_translate += CAM_ARENA_WEIGHT * Vec3::default();
+    player_count += CAM_ARENA_WEIGHT; // center of arena take into acount just as a player
+
+    // barycentre
+    target_translate *= 1.0 / player_count;
+
+    for mut camera_transform in &mut camera_query
+    {
+        let new_camera_translate = CAM_ELASTICITY * camera_transform.translation + (1.0 - CAM_ELASTICITY) * target_translate;
+        camera_transform.translation = new_camera_translate;
+        info!("Camera: {:?}", camera_transform);
+    }
+}
+
+
 // fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
 //     audio
 //         .play(asset_server.load(""))
@@ -162,6 +197,7 @@ pub fn run() {
     app.add_systems(Startup, setup);
 
     app.add_systems(OnEnter(MyAppState::InGame), setup_game);
+    app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
 
     app.add_systems(
         FixedUpdate,
