@@ -1,5 +1,5 @@
 #![allow(clippy::type_complexity)]
-use bevy::{asset::Assets, math::vec2, prelude::*, transform, window::PresentMode};
+use bevy::{asset::Assets, prelude::*, window::PresentMode};
 use bevy_kira_audio::prelude::*;
 use main_menu::main_menu_plugin::MainMenuPlugin;
 
@@ -30,7 +30,48 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-fn setup_game(
+fn setup_glasses(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    // Arena
+    commands.spawn((
+        RigidBody::Static,
+        Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., GLASS_HEIGHT))),
+        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_YELLOW))),
+        Transform::default().with_translation(Vec3::new(0., 0., -1.)),
+    ));
+
+    // Glasses BOTTOM
+    commands.spawn((
+        RigidBody::Static,
+        Collider::rectangle(GLASS_RADIUS * 2., GLASS_WIDTH),
+        Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., GLASS_WIDTH))),
+        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_BLUE))),
+        Transform::default().with_translation(Vec3::new(0., -GLASS_HEIGHT / 2., 0.)),
+    ));
+
+    // Glasses LEFT
+    commands.spawn((
+        RigidBody::Static,
+        Collider::rectangle(GLASS_WIDTH, GLASS_HEIGHT),
+        Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
+        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_BLUE))),
+        Transform::default().with_translation(Vec3::new(-GLASS_RADIUS, 0., 0.)),
+    ));
+
+    // Glasses RIGHT
+    commands.spawn((
+        RigidBody::Static,
+        Collider::rectangle(GLASS_WIDTH, GLASS_HEIGHT),
+        Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
+        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_BLUE))),
+        Transform::default().with_translation(Vec3::new(GLASS_RADIUS, 0., 0.)),
+    ));
+}
+
+fn setup_game_player(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -47,13 +88,6 @@ fn setup_game(
         Player(0),
         Volume(width * height),
         ExternalForce::default().with_persistence(false),
-    ));
-
-    // Arena
-    commands.spawn((
-        Mesh2d(meshes.add(Rectangle::new(ARENA_WIDTH, ARENA_HEIGHT))),
-        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::DARK_GREEN))),
-        Transform::default().with_translation(Vec3::new(0., 0., -1.)),
     ));
 }
 
@@ -177,25 +211,30 @@ fn use_turbo(
 }
 
 fn update_camera(
-    mut camera_query : Query<(&mut Transform, &mut OrthographicProjection), (With<Camera2d>, Without<Player>)>,
-    player_query : Query<&Transform, (With<Player>, Without<Camera2d>)>
-)
-{
+    mut camera_query: Query<
+        (&mut Transform, &mut OrthographicProjection),
+        (With<Camera2d>, Without<Player>),
+    >,
+    player_query: Query<&Transform, (With<Player>, Without<Camera2d>)>,
+) {
     // arena center participation
     let mut interest_area = Rect::new(
-        -0.5 * ARENA_WIDTH, -0.5 * ARENA_HEIGHT, 0.5 * ARENA_WIDTH, 0.5 * ARENA_HEIGHT);
+        -0.5 * GLASS_RADIUS * 2.0,
+        -0.5 * GLASS_HEIGHT,
+        0.5 * GLASS_RADIUS * 2.0,
+        0.5 * GLASS_HEIGHT,
+    );
 
     // players participation
-    for player_transform in player_query.iter()
-    {
+    for player_transform in player_query.iter() {
         interest_area = interest_area.union_point(player_transform.translation.xy());
     }
     let center = interest_area.center();
     let target_position = Vec3::new(center.x, center.y, 0.);
 
-    for (mut camera_transform, mut cam) in &mut camera_query
-    {
-        let new_camera_translate = CAM_ELASTICITY * camera_transform.translation + (1.0 - CAM_ELASTICITY) * target_position;
+    for (mut camera_transform, mut cam) in &mut camera_query {
+        let new_camera_translate = CAM_ELASTICITY * camera_transform.translation
+            + (1.0 - CAM_ELASTICITY) * target_position;
         camera_transform.translation = new_camera_translate;
 
         let mut cam_area = cam.area;
@@ -206,21 +245,18 @@ fn update_camera(
 
         let mut zoom: f32 = cam.scale;
 
-        if cam_area.union(interest_area) != cam_area
-        {
+        if cam_area.union(interest_area) != cam_area {
             zoom *= 1.01;
         }
 
         let inner = cam_area.inflate(-200.);
-        if inner.union(interest_area) == inner
-        {
+        if inner.union(interest_area) == inner {
             zoom *= 0.99;
         }
 
         zoom = zoom.clamp(CAM_ZOOM_MIN, CAM_ZOOM_MAX);
         cam.scale = zoom;
     }
-
 }
 
 // fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
@@ -229,12 +265,9 @@ fn update_camera(
 //         .looped();
 // }
 
-fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), (With<Bubble>)>)
-{
-    for (entity, transform) in query.iter()
-    {
-        if transform.translation.y > ARENA_HEIGHT * 0.5
-        {
+fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), (With<Bubble>)>) {
+    for (entity, transform) in query.iter() {
+        if transform.translation.y > GLASS_HEIGHT * 0.5 {
             commands.entity(entity).despawn();
         }
     }
@@ -267,7 +300,8 @@ pub fn run() {
     }
     app.add_systems(Startup, setup);
 
-    app.add_systems(OnEnter(MyAppState::InGame), setup_game);
+    app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
+    app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
     app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
 
     app.add_systems(

@@ -15,5 +15,7 @@ pub const CAM_ZOOM_MIN: f32 = 0.1; // zoom in
 pub const CAM_ZOOM_MAX: f32 = 10.; // zoom out
 
 // Arena
-pub const ARENA_WIDTH: f32 = 800.;
-pub const ARENA_HEIGHT: f32 = 600.;
+
+pub const GLASS_RADIUS: f32 = 800.;
+pub const GLASS_HEIGHT: f32 = 1600.;
+pub const GLASS_WIDTH: f32 = 10.;
