@@ -106,7 +106,7 @@ fn setup_game_player(
         Mesh2d(meshes.add(Rectangle::new(width, height))),
         MeshMaterial2d(material_asset),
         Transform::default(),
-        ColliderDensity(1.5),
+        ColliderDensity(CACHET_DENSITY),
         Player(0),
         Volume(width * height),
         ExternalForce::default().with_persistence(false),
@@ -124,51 +124,66 @@ fn spawn_bubble(
     initial_speed: f32,
     is_colliding: bool,
 ) {
-    if is_colliding {
-        commands.spawn((
-            Bubble,
-            RigidBody::Dynamic,
-            Collider::circle(BUBBLE_RADIUS),
-            Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
-            Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
-            MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
-            Transform::from_translation(transform),
-            ColliderDensity(0.05),
-            LinearVelocity(direction.xy() * initial_speed),
-            ExternalForce::default().with_persistence(false),
-        ));
-    } else {
-        commands.spawn((
-            Bubble,
-            RigidBody::Dynamic,
-            Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
-            Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
-            MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
-            Transform::from_translation(transform),
-            Mass(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI * 0.05),
-            LinearVelocity(direction.xy() * initial_speed),
-            ExternalForce::default().with_persistence(false),
-        ));
-    }
+    //     if is_colliding {
+    //         commands.spawn((
+    //             Bubble,
+    //             RigidBody::Dynamic,
+    //             Collider::circle(BUBBLE_RADIUS),
+    //             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+    //             Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
+    //             MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
+    //             Transform::from_translation(transform),
+    //             ColliderDensity(0.05),
+    //             LinearVelocity(direction.xy() * initial_speed),
+    //             ExternalForce::default().with_persistence(false),
+    //         ));
+    //     } else {
+    //         commands.spawn((
+    //             Bubble,
+    //             RigidBody::Dynamic,
+    //             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
+    //             Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
+    //             MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
+    //             Transform::from_translation(transform),
+    //             Mass(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI * 0.05),
+    //             LinearVelocity(direction.xy() * initial_speed),
+    //             ExternalForce::default().with_persistence(false),
+    //         ));
+    //     }
 }
 
 fn drag_force(
-    mut in_water_object: Query<(&Transform, &Volume, &LinearVelocity, &mut ExternalForce)>,
+    mut in_water_object: Query<(
+        &Transform,
+        &Volume,
+        &mut LinearVelocity,
+        &mut AngularVelocity,
+        &mut ExternalForce,
+        &ComputedMass,
+    )>,
 ) {
-    for (transform, volume, linear_velocity, mut force) in &mut in_water_object {
+    for (transform, volume, mut linear_velocity, mut angular_velocity, mut force, mass) in
+        &mut in_water_object
+    {
         if is_in_water(&transform.translation) {
             let archimede = FLUID_DENSITY * GRAVITY * volume.0 * Vec2::Y;
-            let drag = -DRAG_COEFFICIENT * linear_velocity.0;
-            force.apply_force(archimede + drag);
+            linear_velocity.0 = (1. - DRAG_WATER_COEFFICIENT) * linear_velocity.0;
+            angular_velocity.0 = (1. - DRAG_WATER_COEFFICIENT) * angular_velocity.0;
+            force.apply_force(archimede);
+        } else {
+            let double_gravity = GRAVITY * GRAVITY_SCALE * 3.0 * mass.value() * Vec2::NEG_Y;
+            linear_velocity.0 = (1. - DRAG_AIR_COEFFICIENT) * linear_velocity.0;
+            angular_velocity.0 = (1. - DRAG_AIR_COEFFICIENT) * angular_velocity.0;
+            force.apply_force(double_gravity);
         }
     }
 }
 
 fn is_in_water(translation: &Vec3) -> bool {
-    return translation.y <= GLASS_HEIGHT * 0.5
+    translation.y <= GLASS_HEIGHT * 0.5
         && translation.y >= GLASS_HEIGHT * -0.5
         && translation.x >= -GLASS_RADIUS
-        && translation.x <= GLASS_RADIUS;
+        && translation.x <= GLASS_RADIUS
 }
 
 fn use_turbo(
