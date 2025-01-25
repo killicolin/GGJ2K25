@@ -26,7 +26,7 @@ pub const WATER_LEVEL: f32 = 1400.;
 pub const GLASS_WIDTH: f32 = 30.;
 
 // Health
-pub const INITIAL_HEALTH: f32 = 100.;
+pub const INITIAL_HEALTH: f32 = 1000.;
 pub const GLOBAL_DAMAGE_SCALE: f32 = 0.1;
 pub const WATER_TICK_DAMAGE: f32 = 1.;
 pub const TURBO_TICK_DAMAGE: f32 = 3.;
