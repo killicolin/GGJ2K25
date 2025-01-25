@@ -7,6 +7,7 @@ pub const BUBBLE_RADIUS: f32 = 2.;
 pub const BUBBLE_EMMISSION_SPEED: f32 = 100.;
 
 pub const TURBO_FORCE: f32 = 2500000.;
+pub const NB_TURBO_PARTICLE: usize = 5;
 
 // Camera
 pub const CAM_ELASTICITY: f32 = 0.95;

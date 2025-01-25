@@ -81,10 +81,10 @@ fn spawn_bubble(
         commands.spawn((
             RigidBody::Dynamic,
             Mesh2d(meshes.add(Circle::new(BUBBLE_RADIUS))),
-            Volume(BUBBLE_RADIUS * std::f32::consts::PI),
+            Volume(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI),
             MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::BLUE))),
             Transform::from_translation(transform),
-            Mass(BUBBLE_RADIUS * 2. * std::f32::consts::PI * 0.05),
+            Mass(BUBBLE_RADIUS * BUBBLE_RADIUS * 2. * std::f32::consts::PI * 0.05),
             LinearVelocity(direction.xy() * initial_speed),
             ExternalForce::default().with_persistence(false),
         ));
@@ -119,18 +119,20 @@ fn use_turbo(
                 (transform.rotation * left).xy(),
                 (transform.rotation * center).xy(),
             );
-            let is_colliding = rng.gen_bool(0.5);
+            let is_colliding = rng.gen_bool(0.7);
             let pos = if is_colliding { 0. } else { 1. };
-            spawn_bubble(
-                &mut commands,
-                &mut meshes,
-                &mut materials,
-                transform.translation
-                    + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
-                (transform.rotation * Vec3::NEG_Y),
-                BUBBLE_EMMISSION_SPEED * (1. - pos),
-                is_colliding,
-            );
+            for _ in 1..NB_TURBO_PARTICLE {
+                spawn_bubble(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    transform.translation
+                        + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
+                    (transform.rotation * Vec3::NEG_Y),
+                    BUBBLE_EMMISSION_SPEED * (1. - pos),
+                    is_colliding,
+                );
+            }
         }
 
         if keyboard_input.pressed(KeyCode::KeyD) {
@@ -139,18 +141,21 @@ fn use_turbo(
                 (transform.rotation * right).xy(),
                 (transform.rotation * center).xy(),
             );
-            let is_colliding = rng.gen_bool(0.5);
+            let is_colliding = rng.gen_bool(0.7);
             let pos = if is_colliding { 0. } else { 1. };
-            spawn_bubble(
-                &mut commands,
-                &mut meshes,
-                &mut materials,
-                transform.translation
-                    + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
-                (transform.rotation * Vec3::NEG_Y),
-                BUBBLE_EMMISSION_SPEED * (1. - pos),
-                is_colliding,
-            );
+
+            for _ in 1..NB_TURBO_PARTICLE {
+                spawn_bubble(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    transform.translation
+                        + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
+                    (transform.rotation * Vec3::NEG_Y),
+                    BUBBLE_EMMISSION_SPEED * (1. - pos),
+                    is_colliding,
+                );
+            }
         }
         spawn_bubble(
             &mut commands,
