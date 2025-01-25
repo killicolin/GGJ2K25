@@ -94,9 +94,9 @@ fn setup_game_player(
 //, mut interaction_query: Query<(&Transform), (With<Player>)>
 
 fn spawn_bubble(
-    mut commands: &mut Commands,
-    mut meshes: &mut ResMut<Assets<Mesh>>,
-    mut materials: &mut ResMut<Assets<ColorMaterial>>,
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
     transform: Vec3,
     direction: Vec3,
     initial_speed: f32,
@@ -142,12 +142,19 @@ fn drag_force(
     }
 }
 
+fn is_in_water(translation: &Vec3) -> bool {
+    return translation.y <= GLASS_HEIGHT * 0.5
+        && translation.y >= GLASS_HEIGHT * -0.5
+        && translation.x >= -GLASS_RADIUS
+        && translation.x <= GLASS_RADIUS;
+}
+
 fn use_turbo(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut cachet_query: Query<(&Transform, &mut ExternalForce), (With<Player>)>,
+    mut cachet_query: Query<(&Transform, &mut ExternalForce), With<Player>>,
 ) {
     let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
     rng.gen_range(-60. ..4.);
@@ -157,7 +164,7 @@ fn use_turbo(
     let top = Vec3::new(0., 13., 0.);
     let center = Vec3::new(0., 0., 0.);
     for (transform, mut force) in &mut cachet_query {
-        if transform.translation.y <= GLASS_HEIGHT * 0.5 {
+        if is_in_water(&transform.translation) {
             if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::KeyW) {
                 force.apply_force_at_point(
                     (transform.rotation * amplitude).xy(),
@@ -294,9 +301,9 @@ fn update_camera(
 //         .looped();
 // }
 
-fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), (With<Bubble>)>) {
+fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), With<Bubble>>) {
     for (entity, transform) in query.iter() {
-        if transform.translation.y > GLASS_HEIGHT * 0.5 {
+        if ! is_in_water(&transform.translation) {
             commands.entity(entity).despawn();
         }
     }
