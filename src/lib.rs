@@ -1,10 +1,10 @@
 #![allow(clippy::type_complexity)]
-use bevy::{asset::Assets, ecs::entity, prelude::*, sprite::Material2dPlugin, window::PresentMode};
+use bevy::{asset::Assets, prelude::*, sprite::Material2dPlugin, window::PresentMode, ui::widget::NodeImageMode};
 use bevy_kira_audio::prelude::*;
 use cachet_material::CachetMaterial;
 use main_menu::main_menu_plugin::MainMenuPlugin;
 
-use avian2d::{parry::na::min, prelude::*};
+use avian2d::prelude::*;
 mod cachet_material;
 mod constants;
 mod main_menu;
@@ -17,6 +17,9 @@ struct InGame;
 
 #[derive(Component)]
 struct Player(u32);
+
+#[derive(Component)]
+struct HudPlayer(u32);
 
 #[derive(Component, Debug)]
 struct Health(f32);
@@ -434,6 +437,23 @@ fn update_health(mut query: Query<(&mut Health, &Transform)>) {
     }
 }
 
+fn update_ui(
+    mut query_players: Query<(&Health, &Player)>,
+    mut query_ui: Query<(&mut Node, &HudPlayer)>
+) {
+    for (health, player) in &mut query_players
+    {
+        for (mut node, hudplayer) in &mut query_ui
+        {
+            if hudplayer.0 == player.0
+            {
+                let min = 13.;
+                node.width = Val::Percent(min + (100. - min) * health.0 / INITIAL_HEALTH);
+            }
+        }
+    }
+}
+
 fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), With<Bubble>>) {
     for (entity, transform) in query.iter() {
         if !is_in_water(&transform.translation) {
@@ -454,8 +474,80 @@ fn try_kill_by_health(
     }
 }
 
-fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>) {
-    for entity in query.iter() {
+fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+
+    let image_outer_bar = asset_server.load("sprite/bar_outer.png");
+    let image_inner_bar = asset_server.load("sprite/bar_inner.png");
+
+    let slicer = TextureSlicer {
+        border: BorderRect::square(64.0),
+        center_scale_mode: SliceScaleMode::Stretch,
+        sides_scale_mode: SliceScaleMode::Stretch,
+        max_corner_scale: 1.0,
+    };
+    commands
+        .spawn((InGame, Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(12.0),
+            top: Val::Percent(86.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceEvenly,
+            ..default()
+        }))
+        .with_children(|parent| {
+            for (w, h, tag) in [
+                (100.0, 32.0, HudPlayer(0)),
+                (100.0, 32.0, HudPlayer(1)),
+                (100.0, 32.0, HudPlayer(2)),
+                (100.0, 32.0, HudPlayer(3))
+                ] {
+                parent
+                    .spawn((
+                        InGame,
+                        Button,
+                        ImageNode {
+                            image: image_outer_bar.clone(),
+                            image_mode: NodeImageMode::Sliced(slicer.clone()),
+                            ..default()
+                        },
+                        Node {
+                            width: Val::Vw(w),
+                            height: Val::Px(h),
+                            // horizontally center child text
+                            justify_content: JustifyContent::Start,
+                            // vertically center child text
+                            align_items: AlignItems::Center,
+                            margin: UiRect::all(Val::Px(20.0)),
+                            ..default()
+                        },
+                    ))
+                    .with_child((
+                        InGame,
+                        tag,
+                        ImageNode {
+                            image: image_inner_bar.clone(),
+                            image_mode: NodeImageMode::Sliced(slicer.clone()),
+                            ..default()
+                        },
+                        Node {
+                            width: Val::Percent(100.),
+                            height: Val::Percent(100.),
+                            // horizontally center child text
+                            justify_content: JustifyContent::Center,
+                            // vertically center child text
+                            align_items: AlignItems::Center,
+                            // margin: UiRect::all(Val::Px(20.0)),
+                            ..default()
+                        },
+                    ));
+            }
+        });
+}
+
+fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>)
+{
+    for entity in query.iter()
+    {
         commands.entity(entity).despawn();
     }
 }
@@ -501,6 +593,8 @@ pub fn run() {
     app.add_systems(OnEnter(MyAppState::InGame), resetup);
     app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
     app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
+    app.add_systems(OnEnter(MyAppState::InGame), setup_ui);
+
     app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
 
     app.add_systems(
@@ -510,7 +604,7 @@ pub fn run() {
 
     app.add_systems(
         FixedPostUpdate,
-        (try_kill_bubbles, try_kill_by_health).run_if(in_state(MyAppState::InGame)),
+        (update_ui, try_kill_bubbles, try_kill_by_health).run_if(in_state(MyAppState::InGame)),
     );
     app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
 
