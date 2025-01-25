@@ -24,3 +24,8 @@ pub const GLASS_RADIUS: f32 = 800.;
 pub const GLASS_HEIGHT: f32 = 1600.;
 pub const WATER_LEVEL: f32 = 1400.;
 pub const GLASS_WIDTH: f32 = 30.;
+
+// Health
+pub const GLOBAL_DAMAGE_SCALE: f32 = 0.02;
+pub const WATER_TICK_DAMAGE: f32 = 1.;
+pub const TURBO_TICK_DAMAGE: f32 = 3.;

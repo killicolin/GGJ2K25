@@ -15,6 +15,9 @@ use rand::Rng;
 #[derive(Component)]
 struct Player(u32);
 
+#[derive(Component, Debug)]
+struct Health(f32);
+
 #[derive(Component)]
 struct Bubble;
 
@@ -116,6 +119,7 @@ fn setup_game_player(
         Transform::default(),
         ColliderDensity(CACHET_DENSITY),
         Player(0),
+        Health(100.),
         Volume(width * height),
         ExternalForce::default().with_persistence(false),
     ));
@@ -201,7 +205,7 @@ fn use_turbo(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut cachet_query: Query<(&Transform, &mut ExternalForce), With<Player>>,
+    mut cachet_query: Query<(&Transform, &mut ExternalForce, &mut Health), With<Player>>,
 ) {
     let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
     rng.gen_range(-60. ..4.);
@@ -210,7 +214,7 @@ fn use_turbo(
     let right_bottom = Vec3::new(32., -13., 0.);
     let top = Vec3::new(0., 13., 0.);
     let center = Vec3::new(0., 0., 0.);
-    for (transform, mut force) in &mut cachet_query {
+    for (transform, mut force, mut health) in &mut cachet_query {
         if is_in_water(&transform.translation) {
             if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::KeyW) {
                 force.apply_force_at_point(
@@ -218,6 +222,7 @@ fn use_turbo(
                     (transform.rotation * left_bottom).xy(),
                     (transform.rotation * center).xy(),
                 );
+                health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
                 let is_colliding = rng.gen_bool(0.3);
                 let pos = if is_colliding { 0. } else { 1. };
                 for _ in 1..NB_TURBO_PARTICLE {
@@ -239,6 +244,7 @@ fn use_turbo(
                     (transform.rotation * right_bottom).xy(),
                     (transform.rotation * center).xy(),
                 );
+                health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
                 let is_colliding = rng.gen_bool(0.3);
                 let pos = if is_colliding { 0. } else { 1. };
 
@@ -261,6 +267,7 @@ fn use_turbo(
                     (transform.rotation * top).xy(),
                     (transform.rotation * center).xy(),
                 );
+                health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
                 let is_colliding = rng.gen_bool(0.7);
                 let pos = if is_colliding { 0. } else { 1. };
 
@@ -348,11 +355,26 @@ fn update_camera(
 //         .looped();
 // }
 
+fn update_health(mut query: Query<(&mut Health, &Transform)>) {
+    for (mut health, transform) in &mut query{
+        if is_in_water(&transform.translation)
+        {
+            health.0 -= GLOBAL_DAMAGE_SCALE * WATER_TICK_DAMAGE;
+        }
+    }
+}
+
 fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), With<Bubble>>) {
     for (entity, transform) in query.iter() {
         if !is_in_water(&transform.translation) {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+fn try_kill_by_health(mut commands: Commands, query: Query<(Entity, &Health), With<Player>>)
+{
+    for (entity, health) in query.iter() {
     }
 }
 
@@ -390,12 +412,12 @@ pub fn run() {
 
     app.add_systems(
         FixedUpdate,
-        (use_turbo, drag_force).run_if(in_state(MyAppState::InGame)),
+        (use_turbo, drag_force, update_health).run_if(in_state(MyAppState::InGame)),
     );
 
     app.add_systems(
         FixedPostUpdate,
-        (try_kill_bubbles).run_if(in_state(MyAppState::InGame)),
+        (try_kill_bubbles, try_kill_by_health).run_if(in_state(MyAppState::InGame)),
     );
 
     // app.add_systems(OnEnter(MyAppState::InGame), start_background_audio);
