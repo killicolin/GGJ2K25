@@ -35,13 +35,27 @@ fn setup(mut commands: Commands) {
 fn setup_glasses(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let mut water_color = Color::from(bevy::color::palettes::css::LIGHT_YELLOW);
+    water_color.set_alpha(0.7);
+    let mut glass_color = Color::from(bevy::color::palettes::css::LIGHT_BLUE);
+    glass_color.set_alpha(0.5);
+
+    // Background
+    commands.spawn((
+        Transform::default()
+            .with_translation(Vec3::new(0., 1000., -2.))
+            .with_scale(Vec3::new(2., 2., 1.)),
+        Sprite::from_image(asset_server.load("sprite/Kitchen.png")),
+    ));
+
     // Arena
     commands.spawn((
         RigidBody::Static,
         Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., GLASS_HEIGHT))),
-        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_YELLOW))),
+        MeshMaterial2d(materials.add(water_color)),
         Transform::default().with_translation(Vec3::new(0., 0., -1.)),
     ));
 
@@ -50,7 +64,7 @@ fn setup_glasses(
         RigidBody::Static,
         Collider::rectangle(GLASS_RADIUS * 2., GLASS_WIDTH),
         Mesh2d(meshes.add(Rectangle::new(GLASS_RADIUS * 2., GLASS_WIDTH))),
-        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_BLUE))),
+        MeshMaterial2d(materials.add(glass_color)),
         Transform::default().with_translation(Vec3::new(0., -GLASS_HEIGHT / 2., 0.)),
     ));
 
@@ -59,7 +73,7 @@ fn setup_glasses(
         RigidBody::Static,
         Collider::rectangle(GLASS_WIDTH, GLASS_HEIGHT),
         Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
-        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_BLUE))),
+        MeshMaterial2d(materials.add(glass_color)),
         Transform::default().with_translation(Vec3::new(-GLASS_RADIUS, 0., 0.)),
     ));
 
@@ -68,7 +82,7 @@ fn setup_glasses(
         RigidBody::Static,
         Collider::rectangle(GLASS_WIDTH, GLASS_HEIGHT),
         Mesh2d(meshes.add(Rectangle::new(GLASS_WIDTH, GLASS_HEIGHT))),
-        MeshMaterial2d(materials.add(Color::from(bevy::color::palettes::css::LIGHT_BLUE))),
+        MeshMaterial2d(materials.add(glass_color)),
         Transform::default().with_translation(Vec3::new(GLASS_RADIUS, 0., 0.)),
     ));
 }
