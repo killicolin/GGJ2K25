@@ -9,7 +9,10 @@ use bevy::{
 use bevy_kira_audio::{AudioChannel, AudioControl};
 use rand::Rng;
 
-use crate::{my_audio::my_audio_plugin::GlassChannel, AppState, Glass, Health, Player};
+use crate::{
+    my_audio::my_audio_plugin::{GlassChannel, PlayerChannel},
+    AppState, Glass, Health, Player,
+};
 
 pub struct OnHitPlugin;
 
@@ -23,9 +26,12 @@ impl Plugin for OnHitPlugin {
 }
 
 fn player_hit_player(
+    asset_server: Res<AssetServer>,
     collisions: Res<Collisions>,
+    audio: Res<AudioChannel<PlayerChannel>>,
     mut query: Query<(&LinearVelocity, Entity, &mut Health), (With<Player>)>,
 ) {
+    let _ = audio;
     let mut combinations = query.iter_combinations_mut();
     while let Some([c1, c2]) = combinations.fetch_next() {
         let (velocity1, e1, mut h1) = c1;
@@ -36,12 +42,15 @@ fn player_hit_player(
             let total = v1 + v2;
             let ratio1 = v1 / total;
             let ratio1 = v2 / total;
+            let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
             if player_clash.collision_started() {
                 println!("{} {} {}", v1, v2, player_clash.total_normal_impulse);
                 h1.0 -= f32::min(v2 / 10., 20.);
                 h2.0 -= f32::min(v1 / 10., 20.);
+                audio.play(
+                    asset_server.load(format!("audio/Sfx_tabshock{}.wav", rng.gen_range(1..=3))),
+                );
             }
-            // Play Sound
         }
     }
 }

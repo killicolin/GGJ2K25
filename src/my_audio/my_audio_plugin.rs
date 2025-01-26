@@ -45,15 +45,26 @@ struct EffervescentChannelp4;
 struct SongChannel;
 
 #[derive(Resource, Component, Default, Clone)]
-struct PlayerChannel;
+pub struct PlayerChannel;
 
-fn play_music(asset_server: Res<AssetServer>, audio: Res<AudioChannel<SongChannel>>) {
-    if !audio.is_playing_sound() {
-        audio
-            .play(asset_server.load("audio/Music_Les petits effervescents v1.mp3"))
-            .with_volume(2.0)
-            .looped();
+fn play_menu_music(asset_server: Res<AssetServer>, audio: Res<AudioChannel<SongChannel>>) {
+    if audio.is_playing_sound() {
+        audio.stop();
     }
+    audio
+        .play(asset_server.load("audio/Musicmenu_Les petits effervescents.wav"))
+        .with_volume(1.0)
+        .looped();
+}
+
+fn play_game_music(asset_server: Res<AssetServer>, audio: Res<AudioChannel<SongChannel>>) {
+    if audio.is_playing_sound() {
+        audio.stop();
+    }
+    audio
+        .play(asset_server.load("audio/Music_Les petits effervescents v1.mp3"))
+        .with_volume(1.5)
+        .looped();
 }
 
 fn play_effervescent_sound(
@@ -71,7 +82,7 @@ fn play_effervescent_sound(
                     if !audio1.is_playing_sound() {
                         audio1
                             .play(asset_server.load("audio/Sfx_effer1.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
@@ -79,7 +90,7 @@ fn play_effervescent_sound(
                     if !audio2.is_playing_sound() {
                         audio2
                             .play(asset_server.load("audio/Sfx_effer2.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
@@ -87,7 +98,7 @@ fn play_effervescent_sound(
                     if !audio3.is_playing_sound() {
                         audio3
                             .play(asset_server.load("audio/Sfx_effer1.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
@@ -95,7 +106,7 @@ fn play_effervescent_sound(
                     if !audio4.is_playing_sound() {
                         audio4
                             .play(asset_server.load("audio/Sfx_effer2.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
@@ -312,7 +323,8 @@ impl Plugin for MyAudioPlugin {
         app.add_audio_channel::<EffervescentChannelp4>();
         app.add_audio_channel::<PlayerChannel>();
 
-        app.add_systems(Startup, play_music);
+        app.add_systems(OnEnter(AppState::InGame), play_game_music);
+        app.add_systems(OnEnter(AppState::MainMenu), play_menu_music);
 
         app.add_systems(
             Update,
