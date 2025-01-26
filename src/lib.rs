@@ -21,6 +21,13 @@ use my_audio::my_audio_plugin::MyAudioPlugin;
 use on_hit::on_hit_plugin::OnHitPlugin;
 use rand::Rng;
 
+pub struct PlayerKeyMap {
+    up: KeyCode,
+    left: KeyCode,
+    right: KeyCode,
+    down: KeyCode,
+}
+
 #[derive(Resource)]
 pub struct PlayerNumber(usize);
 
@@ -210,6 +217,88 @@ fn spawn_bubble(
     }
 }
 
+fn bubble_emiter(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut cachet_query: Query<(&Transform, &Player), With<Player>>,
+) {
+    let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+    rng.gen_range(-60. ..4.);
+    for (transform, player) in &mut cachet_query {
+        if is_in_water(&transform.translation) {
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].right)
+                || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
+            {
+                let is_colliding = rng.gen_bool(0.3);
+                let pos = if is_colliding { 0. } else { 1. };
+                for _ in 1..NB_TURBO_PARTICLE {
+                    spawn_bubble(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        player.0,
+                        transform.translation
+                            + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
+                        (transform.rotation * Vec3::NEG_Y),
+                        BUBBLE_EMMISSION_SPEED * (1. - pos),
+                        is_colliding,
+                    );
+                }
+            }
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].left)
+                || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
+            {
+                let is_colliding = rng.gen_bool(0.3);
+                let pos = if is_colliding { 0. } else { 1. };
+                for _ in 1..NB_TURBO_PARTICLE {
+                    spawn_bubble(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        player.0,
+                        transform.translation
+                            + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
+                        (transform.rotation * Vec3::NEG_Y),
+                        BUBBLE_EMMISSION_SPEED * (1. - pos),
+                        is_colliding,
+                    );
+                }
+            }
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].down) {
+                let is_colliding = rng.gen_bool(0.7);
+                let pos = if is_colliding { 0. } else { 1. };
+                for _ in 1..NB_TURBO_PARTICLE * 2 {
+                    spawn_bubble(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        player.0,
+                        transform.translation
+                            + transform.rotation * Vec3::new(rng.gen_range(-60. ..60.), 13., pos),
+                        (transform.rotation * Vec3::NEG_Y),
+                        BUBBLE_EMMISSION_SPEED * (1. - pos),
+                        is_colliding,
+                    );
+                }
+            }
+            spawn_bubble(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                player.0,
+                transform.translation
+                    + transform.rotation
+                        * Vec3::new(rng.gen_range(-60. ..60.), rng.gen_range(-12. ..12.), 1.),
+                (transform.rotation * Vec3::NEG_Y),
+                0.,
+                false,
+            );
+        }
+    }
+}
+
 fn drag_force(
     mut in_water_object: Query<(
         &Transform,
@@ -260,89 +349,34 @@ fn use_turbo(
     let center = Vec3::new(0., 0., 0.);
     for (transform, player, mut force, mut health) in &mut cachet_query {
         if is_in_water(&transform.translation) {
-            if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::KeyW) {
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].right)
+                || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
+            {
                 force.apply_force_at_point(
                     (transform.rotation * amplitude).xy(),
                     (transform.rotation * left_bottom).xy(),
                     (transform.rotation * center).xy(),
                 );
                 health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
-                let is_colliding = rng.gen_bool(0.3);
-                let pos = if is_colliding { 0. } else { 1. };
-                for _ in 1..NB_TURBO_PARTICLE {
-                    spawn_bubble(
-                        &mut commands,
-                        &mut meshes,
-                        &mut materials,
-                        player.0,
-                        transform.translation
-                            + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
-                        (transform.rotation * Vec3::NEG_Y),
-                        BUBBLE_EMMISSION_SPEED * (1. - pos),
-                        is_colliding,
-                    );
-                }
             }
-            if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::KeyW) {
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].left)
+                || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
+            {
                 force.apply_force_at_point(
                     (transform.rotation * amplitude).xy(),
                     (transform.rotation * right_bottom).xy(),
                     (transform.rotation * center).xy(),
                 );
                 health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
-                let is_colliding = rng.gen_bool(0.3);
-                let pos = if is_colliding { 0. } else { 1. };
-
-                for _ in 1..NB_TURBO_PARTICLE {
-                    spawn_bubble(
-                        &mut commands,
-                        &mut meshes,
-                        &mut materials,
-                        player.0,
-                        transform.translation
-                            + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
-                        (transform.rotation * Vec3::NEG_Y),
-                        BUBBLE_EMMISSION_SPEED * (1. - pos),
-                        is_colliding,
-                    );
-                }
             }
-            if keyboard_input.pressed(KeyCode::KeyS) {
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].down) {
                 force.apply_force_at_point(
                     (transform.rotation * -amplitude).xy(),
                     (transform.rotation * top).xy(),
                     (transform.rotation * center).xy(),
                 );
                 health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
-                let is_colliding = rng.gen_bool(0.7);
-                let pos = if is_colliding { 0. } else { 1. };
-
-                for _ in 1..NB_TURBO_PARTICLE * 2 {
-                    spawn_bubble(
-                        &mut commands,
-                        &mut meshes,
-                        &mut materials,
-                        player.0,
-                        transform.translation
-                            + transform.rotation * Vec3::new(rng.gen_range(-60. ..60.), 13., pos),
-                        (transform.rotation * Vec3::NEG_Y),
-                        BUBBLE_EMMISSION_SPEED * (1. - pos),
-                        is_colliding,
-                    );
-                }
             }
-            spawn_bubble(
-                &mut commands,
-                &mut meshes,
-                &mut materials,
-                player.0,
-                transform.translation
-                    + transform.rotation
-                        * Vec3::new(rng.gen_range(-60. ..60.), rng.gen_range(-12. ..12.), 1.),
-                (transform.rotation * Vec3::NEG_Y),
-                0.,
-                false,
-            );
         }
     }
 }
@@ -497,7 +531,7 @@ pub fn run() {
 
     app.add_systems(
         FixedUpdate,
-        (use_turbo, drag_force, update_health).run_if(in_state(MyAppState::InGame)),
+        (use_turbo, bubble_emiter, drag_force, update_health).run_if(in_state(MyAppState::InGame)),
     );
 
     app.add_systems(
