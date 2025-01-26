@@ -1,7 +1,10 @@
 #![allow(clippy::type_complexity)]
 use bevy::{
-    asset::Assets, prelude::*, reflect::GetTupleField, sprite::Material2dPlugin,
-    window::PresentMode,
+    asset::Assets,
+    prelude::*,
+    reflect::GetTupleField,
+    sprite::Material2dPlugin,
+    window::{PresentMode, WindowResolution},
 };
 use bevy_kira_audio::prelude::*;
 use cachet_material::CachetMaterial;
@@ -538,6 +541,7 @@ pub fn run() {
             title: "Tablet Takedown".to_string(),
             canvas: Some("#my-bevy".into()),
             fit_canvas_to_parent: true,
+            resolution: WindowResolution::new(1920., 1080.),
             prevent_default_event_handling: true,
             present_mode: PresentMode::AutoVsync,
             ..default()
@@ -556,11 +560,13 @@ pub fn run() {
     app.add_plugins(MyAudioPlugin);
     app.add_plugins(GameHudPlugin);
     app.add_plugins(OnHitPlugin);
-    cfg_if::cfg_if! {
-        if #[cfg(not(target_arch = "wasm32"))] {
-            app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
-        }
-    }
+
+    // cfg_if::cfg_if! {
+    //     if #[cfg(not(target_arch = "wasm32"))] {
+    //         app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
+    //     }
+    // }
+
     app.add_systems(Startup, setup);
 
     app.add_systems(OnEnter(AppState::InGame), resetup);

@@ -37,13 +37,13 @@ enum PlayerMenuButton {
 #[derive(Component)]
 enum HelpMenu {
     BackButton,
-    HelpImage,
+    Image,
 }
 
 #[derive(Component)]
 enum CreditMenu {
     BackButton,
-    HelpImage,
+    Image,
 }
 
 #[derive(Component)]
@@ -253,7 +253,7 @@ fn button_on_press_help_system(
         if *interaction == Interaction::Pressed {
             match menu_button {
                 HelpMenu::BackButton => menu_state.set(MainMenuState::HomeMenu),
-                HelpMenu::HelpImage => (),
+                HelpMenu::Image => (),
             }
         }
     }
@@ -267,7 +267,7 @@ fn button_on_press_credit_system(
         if *interaction == Interaction::Pressed {
             match menu_button {
                 CreditMenu::BackButton => menu_state.set(MainMenuState::HomeMenu),
-                CreditMenu::HelpImage => (),
+                CreditMenu::Image => (),
             }
         }
     }
@@ -294,7 +294,6 @@ fn setup_main_menu(
                     image: splash,
                     ..default()
                 },
-                BackgroundColor(bevy::color::Color::srgb(0.5, 0.5, 0.5)),
             ))
             .with_children(|parent| {
                 create_menu(parent);
@@ -356,6 +355,19 @@ fn spawn_credit_menu(
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if let Ok(entity) = query.get_single() {
+        let credit_png = asset_server.load("sprite/credits.png");
+        commands.spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                ..default()
+            },
+            CreditMenu::Image,
+            ImageNode {
+                image: credit_png,
+                ..default()
+            },
+        ));
         commands.entity(entity).with_children(|menu_parent| {
             create_button(menu_parent, &asset_server, "Back", CreditMenu::BackButton);
         });
@@ -368,6 +380,19 @@ fn spawn_help_menu(
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if let Ok(entity) = query.get_single() {
+        let help_png = asset_server.load("sprite/help.png");
+        commands.spawn((
+            Node {
+                width: Val::Percent(80.0),
+                height: Val::Percent(80.0),
+                ..default()
+            },
+            HelpMenu::Image,
+            ImageNode {
+                image: help_png,
+                ..default()
+            },
+        ));
         commands.entity(entity).with_children(|menu_parent| {
             create_button(menu_parent, &asset_server, "Back", HelpMenu::BackButton);
         });
