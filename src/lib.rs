@@ -394,7 +394,7 @@ fn update_camera(
         (&mut Transform, &mut OrthographicProjection),
         (With<Camera2d>, Without<Player>),
     >,
-    player_query: Query<&Transform, (With<Player>, Without<Camera2d>)>,
+    player_query: Query<(&Transform, &Health), (With<Player>, Without<Camera2d>)>,
 ) {
     // arena center participation
     let mut interest_area = Rect::new(
@@ -405,8 +405,10 @@ fn update_camera(
     );
 
     // players participation
-    for player_transform in player_query.iter() {
-        interest_area = interest_area.union_point(player_transform.translation.xy());
+    for (player_transform, health) in player_query.iter() {
+        if health.0 > 0.{
+            interest_area = interest_area.union_point(player_transform.translation.xy());
+        }
     }
 
     // buffer
@@ -515,7 +517,10 @@ fn try_kill_by_zone(mut query: Query<(&mut Health, &Transform), With<Player>>) {
     for (mut health, transform) in query.iter_mut() {
         if transform.translation.y < GLASS_HEIGHT * -0.5 {
             health.0 = 0.;
-            warn!("player left the area like a wuss");
+            if transform.scale.x == 1.
+            {
+                warn!("player left the area like a wuss");
+            }
         }
     }
 }
