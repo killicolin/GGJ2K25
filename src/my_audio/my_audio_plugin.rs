@@ -71,7 +71,7 @@ fn play_effervescent_sound(
                     if !audio1.is_playing_sound() {
                         audio1
                             .play(asset_server.load("audio/Sfx_effer1.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
@@ -79,7 +79,7 @@ fn play_effervescent_sound(
                     if !audio2.is_playing_sound() {
                         audio2
                             .play(asset_server.load("audio/Sfx_effer2.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
@@ -87,7 +87,7 @@ fn play_effervescent_sound(
                     if !audio3.is_playing_sound() {
                         audio3
                             .play(asset_server.load("audio/Sfx_effer1.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
@@ -95,7 +95,7 @@ fn play_effervescent_sound(
                     if !audio4.is_playing_sound() {
                         audio4
                             .play(asset_server.load("audio/Sfx_effer2.wav"))
-                            .with_volume(0.04)
+                            .with_volume(0.08)
                             .looped();
                     }
                 }
