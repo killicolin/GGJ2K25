@@ -64,13 +64,19 @@ fn end_game_display(
 
     if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
     {
-        let image_cup = asset_server.load("sprite/cup.png");
+        let mut cup_file = "sprite/cup.png";
+        if alive_players == 0
+        {
+            cup_file = "sprite/cup-dead.png";
+        }
+        let image_cup = asset_server.load(cup_file);
+
         let files = [
             "sprite/P1_won.png",
             "sprite/P2_won.png",
             "sprite/P3_won.png",
             "sprite/P4_won.png",
-            ];
+        ];
 
         let image_winner = asset_server.load(files[last_player_id]);
 
@@ -95,51 +101,38 @@ fn end_game_display(
             },
         ))
         .with_children(|parent| {
-                parent.spawn((
-                    InGame,
-                    ImageNode {
-                        image: image_cup.clone(),
-                        image_mode: NodeImageMode::Sliced(slicer.clone()),
-                        // color: Color::from(PLAYER_COLOR[0]),
-                        ..default()
-                    },
-                    Node {
-                        width: Val::Px(400.),
-                        // height: Val::Percent(400.),
-                        aspect_ratio: Some(1.0),
-                        // horizontally center child text
-                        // justify_content: JustifyContent::Start,
-                        // // vertically center child text
-                        // align_items: AlignItems::Center,
-                        // margin: UiRect::all(Val::Px(20.0)),
-                        ..default()
-                    },
-                )
-            );
-
             parent.spawn((
                     InGame,
                     ImageNode {
-                        image: image_winner.clone(),
-                        image_mode: NodeImageMode::Stretch,
-                        // color: Color::from(PLAYER_COLOR[0]),
+                        image: image_cup,
+                        image_mode: NodeImageMode::Sliced(slicer.clone()),
                         ..default()
                     },
                     Node {
                         width: Val::Px(400.),
-                        // height: Val::Percent(400.),
-                        aspect_ratio: Some(2.0),
-                        // horizontally center child text
-                        // justify_content: JustifyContent::Start,
-                        // // vertically center child text
-                        // align_items: AlignItems::Center,
-                        // margin: UiRect::all(Val::Px(20.0)),
+                        aspect_ratio: Some(1.0),
                         ..default()
                     },
                 )
             );
 
-
+            if alive_players >= 1 {
+                parent.spawn((
+                        InGame,
+                        ImageNode {
+                            image: image_winner,
+                            image_mode: NodeImageMode::Stretch,
+                            color: Color::from(PLAYER_COLOR[last_player_id]),
+                            ..default()
+                        },
+                        Node {
+                            width: Val::Px(400.),
+                            aspect_ratio: Some(2.0),
+                            ..default()
+                        },
+                    )
+                );
+            }
         });
 
     }
