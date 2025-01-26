@@ -294,7 +294,6 @@ fn setup_main_menu(
                     image: splash,
                     ..default()
                 },
-                BackgroundColor(bevy::color::Color::srgb(0.5, 0.5, 0.5)),
             ))
             .with_children(|parent| {
                 create_menu(parent);
@@ -368,6 +367,19 @@ fn spawn_help_menu(
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if let Ok(entity) = query.get_single() {
+        let help_png = asset_server.load("sprite/help.png");
+        commands.spawn((
+            Node {
+                width: Val::Percent(80.0),
+                height: Val::Percent(80.0),
+                ..default()
+            },
+            HelpMenu::HelpImage,
+            ImageNode {
+                image: help_png,
+                ..default()
+            },
+        ));
         commands.entity(entity).with_children(|menu_parent| {
             create_button(menu_parent, &asset_server, "Back", HelpMenu::BackButton);
         });
