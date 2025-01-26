@@ -414,14 +414,29 @@ fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), W
 }
 
 fn try_kill_by_health(
+    query: Query<(&Health, &Player)>
+) {
+    for (health, player) in query.iter() {
+        if health.0 <= 0. {
+            warn!("Player {:?} disolved :'(", player.0);
+        }
+    }
+}
+
+fn end_game_condition(
     mut app_state: ResMut<NextState<MyAppState>>,
     query: Query<&Health, With<Player>>,
 ) {
+    let mut alive_players = 0;
     for health in query.iter() {
-        if health.0 <= 0. {
-            warn!("health depleted: {:?}", health);
-            app_state.set(MyAppState::MainMenu);
+        if health.0 > 0. {
+            alive_players += 1;
         }
+    }
+
+    if alive_players <= 1
+    {
+        app_state.set(MyAppState::MainMenu);
     }
 }
 
@@ -485,8 +500,13 @@ pub fn run() {
 
     app.add_systems(
         FixedPostUpdate,
-        (try_kill_bubbles, try_kill_by_health, try_kill_by_zone)
-            .run_if(in_state(MyAppState::InGame)),
+        (
+            try_kill_bubbles,
+            try_kill_by_health,
+            try_kill_by_zone,
+            end_game_condition,
+        )
+        .run_if(in_state(MyAppState::InGame)),
     );
     app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
 
