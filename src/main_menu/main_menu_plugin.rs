@@ -151,7 +151,7 @@ fn button_on_press_system(
             match menu_button {
                 MenuButton::Start => {
                     app_state.set(MyAppState::InGame);
-                    commands.insert_resource(PlayerNumber(4));
+                    commands.insert_resource(PlayerNumber(1));
                 }
                 MenuButton::Help => todo!(),
                 MenuButton::Quit => {

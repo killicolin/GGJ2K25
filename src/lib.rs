@@ -424,6 +424,7 @@ fn try_kill_by_health(
 }
 
 fn end_game_condition(
+    player_number: Res<PlayerNumber>,
     mut app_state: ResMut<NextState<MyAppState>>,
     query: Query<&Health, With<Player>>,
 ) {
@@ -434,7 +435,8 @@ fn end_game_condition(
         }
     }
 
-    if alive_players <= 1
+    if (player_number.0 == 1 && alive_players <= 0)
+     ||(player_number.0 != 1 && alive_players <= 1)
     {
         app_state.set(MyAppState::MainMenu);
     }
