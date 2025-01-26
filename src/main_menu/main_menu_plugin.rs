@@ -4,8 +4,8 @@ use bevy::{
     color::{Alpha, Color},
     prelude::{
         in_state, BuildChildren, Button, Changed, ChildBuild, ChildBuilder, Commands, Component,
-        Entity, EntityCommands, EventWriter, IntoSystemConfigs, NextState, OnEnter, OnExit, Query,
-        Res, ResMut, Text, With,
+        Entity, EntityCommands, EventWriter, ImageNode, IntoSystemConfigs, NextState, OnEnter,
+        OnExit, Query, Res, ResMut, Text, With,
     },
     text::{TextColor, TextFont},
     ui::{
@@ -101,6 +101,7 @@ fn create_menu<'a>(parent: &'a mut ChildBuilder) -> EntityCommands<'a> {
             align_items: AlignItems::Center,
             flex_direction: FlexDirection::Column,
             row_gap: Val::Px(30.),
+            margin: UiRect::new(Val::Px(30.), Val::Px(30.), Val::Px(30.), Val::Px(30.)),
             ..default()
         },
         BorderColor(BORDER_COLOR),
@@ -163,14 +164,19 @@ fn button_on_press_system(
 }
 
 fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let splash = asset_server.load("sprite/Splash_Screen.png");
     commands
         .spawn((
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                align_content: AlignContent::Center,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
+                align_content: AlignContent::End,
+                justify_content: JustifyContent::End,
+                align_items: AlignItems::End,
+                ..default()
+            },
+            ImageNode {
+                image: splash,
                 ..default()
             },
             BackgroundColor(bevy::color::Color::srgb(0.5, 0.5, 0.5)),

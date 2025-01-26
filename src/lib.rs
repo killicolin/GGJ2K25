@@ -62,6 +62,14 @@ enum MyAppState {
     InGame,
 }
 
+#[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
+enum MyMainMenuState {
+    #[default]
+    MainMenu,
+    Help,
+    PlayerMenu,
+}
+
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
@@ -447,9 +455,7 @@ fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), W
     }
 }
 
-fn try_kill_by_health(
-    query: Query<(&Health, &Player)>
-) {
+fn try_kill_by_health(query: Query<(&Health, &Player)>) {
     for (health, player) in query.iter() {
         if health.0 <= 0. {
             warn!("Player {:?} disolved :'(", player.0);
@@ -469,8 +475,7 @@ fn end_game_condition(
         }
     }
 
-    if (player_number.0 == 1 && alive_players <= 0)
-     ||(player_number.0 != 1 && alive_players <= 1)
+    if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
     {
         app_state.set(MyAppState::MainMenu);
     }
@@ -516,11 +521,11 @@ pub fn run() {
     app.add_plugins(MyAudioPlugin);
     app.add_plugins(GameHudPlugin);
     app.add_plugins(OnHitPlugin);
-    // cfg_if::cfg_if! {
-    //     if #[cfg(not(target_arch = "wasm32"))] {
-    //         app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
-    //     }
-    // }
+    cfg_if::cfg_if! {
+        if #[cfg(not(target_arch = "wasm32"))] {
+            app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
+        }
+    }
     app.add_systems(Startup, setup);
 
     app.add_systems(OnEnter(MyAppState::InGame), resetup);
@@ -542,7 +547,7 @@ pub fn run() {
             try_kill_by_zone,
             end_game_condition,
         )
-        .run_if(in_state(MyAppState::InGame)),
+            .run_if(in_state(MyAppState::InGame)),
     );
     app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
 

@@ -10,5 +10,4 @@ pub const TEXT_COLOR: Color = Color::Srgba(bevy::color::palettes::css::BLACK);
 
 pub const BUTTON_COLOR: Color = Color::Srgba(bevy::color::palettes::css::BEIGE);
 pub const BUTTON_HOVER_COLOR: Color = Color::Srgba(bevy::color::palettes::css::FLORAL_WHITE);
-
-pub const MENU_COLOR: Color = Color::Srgba(bevy::color::palettes::css::BISQUE);
+pub const MENU_COLOR: Color = Color::linear_rgb(1., 0.247, 0.036);
