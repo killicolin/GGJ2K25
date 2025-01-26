@@ -1,7 +1,10 @@
 use bevy::{
     color::{Color, Srgba},
     math::Vec3,
+    prelude::KeyCode,
 };
+
+use crate::PlayerKeyMap;
 
 pub const GRAVITY: f32 = 9.8;
 pub const GRAVITY_SCALE: f32 = 12.;
@@ -37,7 +40,6 @@ pub const WATER_TICK_DAMAGE: f32 = 1.;
 pub const TURBO_TICK_DAMAGE: f32 = 3.;
 
 // PLAYER
-
 pub const PLAYER_COLOR: [Srgba; 4] = [
     bevy::color::palettes::css::ORANGE,
     bevy::color::palettes::css::LIGHT_PINK,
@@ -70,4 +72,31 @@ pub const PLAYER_POSITION: [[Vec3; 4]; 4] = [
         Vec3::new(GLASS_RADIUS / 6.0, 0., 0.),
         Vec3::new(GLASS_RADIUS * 4. / 6.0, 0., 0.),
     ],
+];
+
+pub const PLAYER_CONTROL: [PlayerKeyMap; 4] = [
+    PlayerKeyMap {
+        up: KeyCode::KeyW,
+        left: KeyCode::KeyA,
+        right: KeyCode::KeyD,
+        down: KeyCode::KeyS,
+    },
+    PlayerKeyMap {
+        up: KeyCode::ArrowUp,
+        left: KeyCode::ArrowLeft,
+        right: KeyCode::ArrowRight,
+        down: KeyCode::ArrowDown,
+    },
+    PlayerKeyMap {
+        up: KeyCode::KeyY,
+        left: KeyCode::KeyG,
+        right: KeyCode::KeyJ,
+        down: KeyCode::KeyH,
+    },
+    PlayerKeyMap {
+        up: KeyCode::KeyP,
+        left: KeyCode::KeyL,
+        right: KeyCode::Period,
+        down: KeyCode::Semicolon,
+    },
 ];
