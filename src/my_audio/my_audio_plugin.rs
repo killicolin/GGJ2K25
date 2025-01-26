@@ -47,13 +47,24 @@ struct SongChannel;
 #[derive(Resource, Component, Default, Clone)]
 pub struct PlayerChannel;
 
-fn play_music(asset_server: Res<AssetServer>, audio: Res<AudioChannel<SongChannel>>) {
-    if !audio.is_playing_sound() {
-        audio
-            .play(asset_server.load("audio/Music_Les petits effervescents v1.mp3"))
-            .with_volume(2.0)
-            .looped();
+fn play_menu_music(asset_server: Res<AssetServer>, audio: Res<AudioChannel<SongChannel>>) {
+    if audio.is_playing_sound() {
+        audio.stop();
     }
+    audio
+        .play(asset_server.load("audio/Musicmenu_Les petits effervescents.wav"))
+        .with_volume(1.0)
+        .looped();
+}
+
+fn play_game_music(asset_server: Res<AssetServer>, audio: Res<AudioChannel<SongChannel>>) {
+    if audio.is_playing_sound() {
+        audio.stop();
+    }
+    audio
+        .play(asset_server.load("audio/Music_Les petits effervescents v1.mp3"))
+        .with_volume(1.5)
+        .looped();
 }
 
 fn play_effervescent_sound(
@@ -312,7 +323,8 @@ impl Plugin for MyAudioPlugin {
         app.add_audio_channel::<EffervescentChannelp4>();
         app.add_audio_channel::<PlayerChannel>();
 
-        app.add_systems(Startup, play_music);
+        app.add_systems(OnEnter(AppState::InGame), play_game_music);
+        app.add_systems(OnEnter(AppState::MainMenu), play_menu_music);
 
         app.add_systems(
             Update,
