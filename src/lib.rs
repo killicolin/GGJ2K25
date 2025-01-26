@@ -56,17 +56,18 @@ struct Glass;
 struct Volume(f32);
 
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
-enum MyAppState {
+enum AppState {
     #[default]
     MainMenu,
     InGame,
 }
 
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
-enum MyMainMenuState {
+enum MainMenuState {
     #[default]
-    MainMenu,
+    HomeMenu,
     Help,
+    Credit,
     PlayerMenu,
 }
 
@@ -356,7 +357,7 @@ fn use_turbo(
     let top = Vec3::new(0., 13., 0.);
     let center = Vec3::new(0., 0., 0.);
     for (transform, player, mut force, mut health) in &mut cachet_query {
-        if is_in_water(&transform.translation) && health.0 > 0.{
+        if is_in_water(&transform.translation) && health.0 > 0. {
             if keyboard_input.pressed(PLAYER_CONTROL[player.0].right)
                 || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
             {
@@ -406,7 +407,7 @@ fn update_camera(
 
     // players participation
     for (player_transform, health) in player_query.iter() {
-        if health.0 > 0.{
+        if health.0 > 0. {
             interest_area = interest_area.union_point(player_transform.translation.xy());
         }
     }
@@ -465,13 +466,12 @@ fn try_kill_by_health(
         &Player,
         &mut ColliderDensity,
         &mut Transform,
-        &mut LinearVelocity
-    )>)
-{
+        &mut LinearVelocity,
+    )>,
+) {
     for (entity, health, player, mut density, mut transform, mut vel) in query.iter_mut() {
         if health.0 <= 0. {
-            if transform.scale.x == 1.
-            {
+            if transform.scale.x == 1. {
                 // bye bye message
                 let mut rng = rand::thread_rng();
                 let choice = rng.gen_range(0..3);
@@ -486,8 +486,7 @@ fn try_kill_by_health(
             vel.0 *= 0.95;
             density.0 = CACHET_DENSITY / 3.;
 
-            if transform.scale.x < 0.05
-            {
+            if transform.scale.x < 0.05 {
                 commands.entity(entity).despawn();
             }
         }
@@ -496,7 +495,8 @@ fn try_kill_by_health(
 
 fn end_game_condition(
     player_number: Res<PlayerNumber>,
-    mut app_state: ResMut<NextState<MyAppState>>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut menu_state: ResMut<NextState<MainMenuState>>,
     query: Query<&Health, With<Player>>,
 ) {
     let mut alive_players = 0;
@@ -508,7 +508,8 @@ fn end_game_condition(
 
     if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
     {
-        app_state.set(MyAppState::MainMenu);
+        app_state.set(AppState::MainMenu);
+        menu_state.set(MainMenuState::HomeMenu);
     }
 }
 
@@ -517,8 +518,7 @@ fn try_kill_by_zone(mut query: Query<(&mut Health, &Transform), With<Player>>) {
     for (mut health, transform) in query.iter_mut() {
         if transform.translation.y < GLASS_HEIGHT * -0.5 {
             health.0 = 0.;
-            if transform.scale.x == 1.
-            {
+            if transform.scale.x == 1. {
                 warn!("player left the area like a wuss");
             }
         }
@@ -535,7 +535,7 @@ pub fn run() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
-            title: "GAME_NAME".to_string(),
+            title: "Tablet Takedown".to_string(),
             canvas: Some("#my-bevy".into()),
             fit_canvas_to_parent: true,
             prevent_default_event_handling: true,
@@ -544,7 +544,8 @@ pub fn run() {
         }),
         ..default()
     }));
-    app.init_state::<MyAppState>();
+    app.init_state::<AppState>();
+    app.init_state::<MainMenuState>();
     app.insert_resource(Gravity(Vec2::NEG_Y * GRAVITY * GRAVITY_SCALE));
 
     app.add_plugins(Material2dPlugin::<CachetMaterial>::default());
@@ -562,15 +563,15 @@ pub fn run() {
     }
     app.add_systems(Startup, setup);
 
-    app.add_systems(OnEnter(MyAppState::InGame), resetup);
-    app.add_systems(OnEnter(MyAppState::InGame), setup_game_player);
-    app.add_systems(OnEnter(MyAppState::InGame), setup_glasses);
+    app.add_systems(OnEnter(AppState::InGame), resetup);
+    app.add_systems(OnEnter(AppState::InGame), setup_game_player);
+    app.add_systems(OnEnter(AppState::InGame), setup_glasses);
 
-    app.add_systems(Update, update_camera.run_if(in_state(MyAppState::InGame)));
+    app.add_systems(Update, update_camera.run_if(in_state(AppState::InGame)));
 
     app.add_systems(
         FixedUpdate,
-        (use_turbo, bubble_emiter, drag_force, update_health).run_if(in_state(MyAppState::InGame)),
+        (use_turbo, bubble_emiter, drag_force, update_health).run_if(in_state(AppState::InGame)),
     );
 
     app.add_systems(
@@ -581,9 +582,9 @@ pub fn run() {
             try_kill_by_zone,
             end_game_condition,
         )
-            .run_if(in_state(MyAppState::InGame)),
+            .run_if(in_state(AppState::InGame)),
     );
-    app.add_systems(OnExit(MyAppState::InGame), on_game_exit);
+    app.add_systems(OnExit(AppState::InGame), on_game_exit);
 
     app.run();
 }

@@ -9,7 +9,7 @@ use bevy::{
 use bevy_kira_audio::{AudioChannel, AudioControl};
 use rand::Rng;
 
-use crate::{my_audio::my_audio_plugin::GlassChannel, Glass, Health, MyAppState, Player};
+use crate::{my_audio::my_audio_plugin::GlassChannel, AppState, Glass, Health, Player};
 
 pub struct OnHitPlugin;
 
@@ -17,7 +17,7 @@ impl Plugin for OnHitPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_systems(
             Update,
-            (player_hit_wall, player_hit_player).run_if(in_state(MyAppState::InGame)),
+            (player_hit_wall, player_hit_player).run_if(in_state(AppState::InGame)),
         );
     }
 }

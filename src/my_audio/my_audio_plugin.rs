@@ -1,5 +1,5 @@
 use bevy::{
-    app::{Plugin, Update},
+    app::{Plugin, Startup, Update},
     asset::AssetServer,
     input::ButtonInput,
     prelude::{
@@ -8,7 +8,7 @@ use bevy::{
 };
 use bevy_kira_audio::{Audio, AudioApp, AudioChannel, AudioControl};
 
-use crate::{is_in_water, MyAppState, Player, PLAYER_CONTROL};
+use crate::{is_in_water, AppState, Player, PLAYER_CONTROL};
 
 pub struct MyAudioPlugin;
 
@@ -312,7 +312,7 @@ impl Plugin for MyAudioPlugin {
         app.add_audio_channel::<EffervescentChannelp4>();
         app.add_audio_channel::<PlayerChannel>();
 
-        app.add_systems(OnEnter(MyAppState::InGame), play_music);
+        app.add_systems(Startup, play_music);
 
         app.add_systems(
             Update,
@@ -323,7 +323,7 @@ impl Plugin for MyAudioPlugin {
                 play_turbo_sound4,
                 play_effervescent_sound,
             )
-                .run_if(in_state(MyAppState::InGame)),
+                .run_if(in_state(AppState::InGame)),
         );
     }
 }
