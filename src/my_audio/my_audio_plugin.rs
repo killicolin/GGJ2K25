@@ -45,7 +45,7 @@ struct EffervescentChannelp4;
 struct SongChannel;
 
 #[derive(Resource, Component, Default, Clone)]
-struct PlayerChannel;
+pub struct PlayerChannel;
 
 fn play_music(asset_server: Res<AssetServer>, audio: Res<AudioChannel<SongChannel>>) {
     if !audio.is_playing_sound() {
