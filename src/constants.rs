@@ -36,15 +36,15 @@ pub const GLASS_WIDTH: f32 = 30.;
 // Health
 pub const INITIAL_HEALTH: f32 = 1000.;
 pub const GLOBAL_DAMAGE_SCALE: f32 = 0.1;
-pub const WATER_TICK_DAMAGE: f32 = 1.;
-pub const TURBO_TICK_DAMAGE: f32 = 3.;
+pub const WATER_TICK_DAMAGE: f32 = 2.;
+pub const TURBO_TICK_DAMAGE: f32 = -0.7;
 
 // PLAYER
 pub const PLAYER_COLOR: [Srgba; 4] = [
     bevy::color::palettes::css::ORANGE,
     bevy::color::palettes::css::LIGHT_PINK,
-    bevy::color::palettes::css::LIGHT_GOLDENROD_YELLOW,
-    bevy::color::palettes::css::LAVENDER_BLUSH,
+    bevy::color::palettes::css::LAVENDER,
+    bevy::color::palettes::css::PALE_TURQUOISE,
 ];
 
 pub const PLAYER_POSITION: [[Vec3; 4]; 4] = [
@@ -88,15 +88,15 @@ pub const PLAYER_CONTROL: [PlayerKeyMap; 4] = [
         down: KeyCode::ArrowDown,
     },
     PlayerKeyMap {
-        up: KeyCode::KeyY,
-        left: KeyCode::KeyG,
-        right: KeyCode::KeyJ,
-        down: KeyCode::KeyH,
-    },
-    PlayerKeyMap {
         up: KeyCode::KeyP,
         left: KeyCode::KeyL,
         right: KeyCode::Period,
         down: KeyCode::Semicolon,
+    },
+    PlayerKeyMap {
+        up: KeyCode::KeyY,
+        left: KeyCode::KeyG,
+        right: KeyCode::KeyJ,
+        down: KeyCode::KeyH,
     },
 ];

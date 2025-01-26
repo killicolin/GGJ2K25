@@ -14,7 +14,7 @@ use bevy::{
 };
 
 use crate::{
-    Health, HudInnerBar, HudPlayer, InGame, MyAppState, Player, PlayerNumber, INITIAL_HEALTH,
+    Health, HudInnerBar, HudPlayer, InGame, AppState, Player, PlayerNumber, INITIAL_HEALTH,
     PLAYER_COLOR,
 };
 
@@ -22,10 +22,10 @@ pub struct GameHudPlugin;
 
 impl Plugin for GameHudPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(OnEnter(MyAppState::InGame), setup_ui);
+        app.add_systems(OnEnter(AppState::InGame), setup_ui);
         app.add_systems(
             FixedPostUpdate,
-            (update_ui).run_if(in_state(MyAppState::InGame)),
+            (update_ui).run_if(in_state(AppState::InGame)),
         );
     }
 }
