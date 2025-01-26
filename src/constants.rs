@@ -90,7 +90,7 @@ pub const PLAYER_CONTROL: [PlayerKeyMap; 4] = [
     PlayerKeyMap {
         up: KeyCode::KeyP,
         left: KeyCode::KeyL,
-        right: KeyCode::Period,
+        right: KeyCode::Quote,
         down: KeyCode::Semicolon,
     },
     PlayerKeyMap {
