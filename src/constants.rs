@@ -39,6 +39,9 @@ pub const GLOBAL_DAMAGE_SCALE: f32 = 0.1;
 pub const WATER_TICK_DAMAGE: f32 = 2.;
 pub const TURBO_TICK_DAMAGE: f32 = -0.7;
 
+// END GAME MENU
+pub const MENU_DURATION : u32 = 300;
+
 // PLAYER
 pub const PLAYER_COLOR: [Srgba; 4] = [
     bevy::color::palettes::css::ORANGE,

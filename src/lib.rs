@@ -46,6 +46,9 @@ struct HudPlayer(usize);
 #[derive(Component, Copy, Clone)]
 struct HudInnerBar;
 
+#[derive(Component, Copy, Clone)]
+struct EndGameDisplay (u32);
+
 #[derive(Component, Debug)]
 struct Health(f32);
 
@@ -59,7 +62,7 @@ struct Glass;
 struct Volume(f32);
 
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
-enum AppState {
+pub enum AppState {
     #[default]
     MainMenu,
     InGame,
@@ -505,7 +508,13 @@ fn end_game_condition(
     mut app_state: ResMut<NextState<AppState>>,
     mut menu_state: ResMut<NextState<MainMenuState>>,
     query: Query<&Health, With<Player>>,
+    query_end_menu: Query<(), With<EndGameDisplay>>,
 ) {
+    if ! query_end_menu.is_empty()
+    {
+        return;
+    }
+
     let mut alive_players = 0;
     for health in query.iter() {
         if health.0 > 0. {
@@ -513,11 +522,11 @@ fn end_game_condition(
         }
     }
 
-    if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
-    {
-        app_state.set(AppState::MainMenu);
-        menu_state.set(MainMenuState::HomeMenu);
-    }
+    // if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
+    // {
+    //     app_state.set(AppState::MainMenu);
+    //     menu_state.set(MainMenuState::HomeMenu);
+    // }
 }
 
 // kill the player when they are out of the playable area
