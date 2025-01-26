@@ -556,11 +556,13 @@ pub fn run() {
     app.add_plugins(MyAudioPlugin);
     app.add_plugins(GameHudPlugin);
     app.add_plugins(OnHitPlugin);
-    cfg_if::cfg_if! {
-        if #[cfg(not(target_arch = "wasm32"))] {
-            app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
-        }
-    }
+
+    // cfg_if::cfg_if! {
+    //     if #[cfg(not(target_arch = "wasm32"))] {
+    //         app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
+    //     }
+    // }
+
     app.add_systems(Startup, setup);
 
     app.add_systems(OnEnter(AppState::InGame), resetup);
