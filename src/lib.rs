@@ -361,9 +361,15 @@ fn use_turbo(
     let center = Vec3::new(0., 0., 0.);
     for (transform, player, mut force, mut health) in &mut cachet_query {
         if is_in_water(&transform.translation) && health.0 > 0. {
-            if keyboard_input.pressed(PLAYER_CONTROL[player.0].right)
-                || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
-            {
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].up) {
+                force.apply_force_at_point(
+                    (transform.rotation * amplitude).xy(),
+                    (transform.rotation * center).xy(),
+                    (transform.rotation * center).xy(),
+                );
+                health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
+            }
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].right) {
                 force.apply_force_at_point(
                     (transform.rotation * amplitude).xy(),
                     (transform.rotation * left_bottom).xy(),
@@ -371,9 +377,7 @@ fn use_turbo(
                 );
                 health.0 -= TURBO_TICK_DAMAGE * GLOBAL_DAMAGE_SCALE;
             }
-            if keyboard_input.pressed(PLAYER_CONTROL[player.0].left)
-                || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
-            {
+            if keyboard_input.pressed(PLAYER_CONTROL[player.0].left) {
                 force.apply_force_at_point(
                     (transform.rotation * amplitude).xy(),
                     (transform.rotation * right_bottom).xy(),
