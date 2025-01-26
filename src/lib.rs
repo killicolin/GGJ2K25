@@ -230,12 +230,12 @@ fn bubble_emiter(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut cachet_query: Query<(&Transform, &Player), With<Player>>,
+    mut cachet_query: Query<(&Transform, &Player, &Health), With<Player>>,
 ) {
     let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
     rng.gen_range(-60. ..4.);
-    for (transform, player) in &mut cachet_query {
-        if is_in_water(&transform.translation) {
+    for (transform, player, health) in &mut cachet_query {
+        if is_in_water(&transform.translation) && health.0 > 0. {
             if keyboard_input.pressed(PLAYER_CONTROL[player.0].right)
                 || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
             {
@@ -342,9 +342,9 @@ pub fn is_in_water(translation: &Vec3) -> bool {
 }
 
 fn use_turbo(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut cachet_query: Query<(&Transform, &Player, &mut ExternalForce, &mut Health), With<Player>>,
 ) {
@@ -356,7 +356,7 @@ fn use_turbo(
     let top = Vec3::new(0., 13., 0.);
     let center = Vec3::new(0., 0., 0.);
     for (transform, player, mut force, mut health) in &mut cachet_query {
-        if is_in_water(&transform.translation) {
+        if is_in_water(&transform.translation) && health.0 > 0.{
             if keyboard_input.pressed(PLAYER_CONTROL[player.0].right)
                 || keyboard_input.pressed(PLAYER_CONTROL[player.0].up)
             {
@@ -455,10 +455,39 @@ fn try_kill_bubbles(mut commands: Commands, query: Query<(Entity, &Transform), W
     }
 }
 
-fn try_kill_by_health(query: Query<(&Health, &Player)>) {
-    for (health, player) in query.iter() {
+fn try_kill_by_health(
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &Health,
+        &Player,
+        &mut ColliderDensity,
+        &mut Transform,
+        &mut LinearVelocity
+    )>)
+{
+    for (entity, health, player, mut density, mut transform, mut vel) in query.iter_mut() {
         if health.0 <= 0. {
-            warn!("Player {:?} disolved :'(", player.0);
+            if transform.scale.x == 1.
+            {
+                // bye bye message
+                let mut rng = rand::thread_rng();
+                let choice = rng.gen_range(0..3);
+                match choice {
+                    0 => warn!("Player {:?} disolved :'(", player.0),
+                    1 => warn!("Player {:?} didn't want to fight anymore", player.0),
+                    _ => warn!("Player {:?} left the battle arena", player.0),
+                }
+            }
+
+            transform.scale -= 0.005;
+            vel.0 *= 0.95;
+            density.0 = CACHET_DENSITY / 3.;
+
+            if transform.scale.x < 0.05
+            {
+                commands.entity(entity).despawn();
+            }
         }
     }
 }

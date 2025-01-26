@@ -39,7 +39,7 @@ fn update_ui(
         for (mut node, hudplayer) in &mut query_ui_inner {
             if hudplayer.0 == player.0 {
                 let min = 13.;
-                node.width = Val::Percent(min + (100. - min) * health.0 / INITIAL_HEALTH);
+                node.width = Val::Percent(min + (100. - min) * health.0.max(0.) / INITIAL_HEALTH);
             }
         }
     }
