@@ -1,5 +1,8 @@
 #![allow(clippy::type_complexity)]
-use bevy::{asset::Assets, prelude::*, sprite::Material2dPlugin, window::PresentMode};
+use bevy::{
+    asset::Assets, prelude::*, reflect::GetTupleField, sprite::Material2dPlugin,
+    window::PresentMode,
+};
 use bevy_kira_audio::prelude::*;
 use cachet_material::CachetMaterial;
 use game_hud::game_hud_plugin::GameHudPlugin;
@@ -15,16 +18,20 @@ mod on_hit;
 
 use constants::*;
 use my_audio::my_audio_plugin::MyAudioPlugin;
+use on_hit::on_hit_plugin::OnHitPlugin;
 use rand::Rng;
+
+#[derive(Resource)]
+pub struct PlayerNumber(usize);
 
 #[derive(Component)]
 struct InGame;
 
 #[derive(Component)]
-struct Player(u32);
+struct Player(usize);
 
 #[derive(Component, Copy, Clone)]
-struct HudPlayer(u32);
+struct HudPlayer(usize);
 
 #[derive(Component, Copy, Clone)]
 struct HudInnerBar;
@@ -134,42 +141,45 @@ fn setup_glasses(
 fn setup_game_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    player_number: Res<PlayerNumber>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CachetMaterial>>,
 ) {
     let width = 1.0 * 128.;
     let height = 0.2 * 128.;
     let img = asset_server.load("sprite/Cachet.png");
-    let material_asset = materials.add(CachetMaterial {
-        color: Color::from(bevy::color::palettes::css::ORANGE).to_linear(),
-        color_texture: Some(img),
-    });
-    commands.spawn((
-        InGame,
-        RigidBody::Dynamic,
-        Collider::rectangle(width, height),
-        Mesh2d(meshes.add(Rectangle::new(width, height))),
-        MeshMaterial2d(material_asset),
-        Transform::default(),
-        ColliderDensity(CACHET_DENSITY),
-        Player(0),
-        Health(INITIAL_HEALTH),
-        Volume(width * height),
-        ExternalForce::default().with_persistence(false),
-    ));
+    for i in 0..player_number.0 {
+        commands.spawn((
+            InGame,
+            RigidBody::Dynamic,
+            Collider::rectangle(width, height),
+            Mesh2d(meshes.add(Rectangle::new(width, height))),
+            MeshMaterial2d(materials.add(CachetMaterial {
+                color: Color::from(PLAYER_COLOR[i]).to_linear(),
+                color_texture: Some(img.clone()),
+            })),
+            Transform::default().with_translation(PLAYER_POSITION[player_number.0 - 1][i]),
+            ColliderDensity(CACHET_DENSITY),
+            Player(i),
+            Health(INITIAL_HEALTH),
+            Volume(width * height),
+            ExternalForce::default().with_persistence(false),
+        ));
+    }
 }
 
 fn spawn_bubble(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
+    player: usize,
     transform: Vec3,
     direction: Vec3,
     initial_speed: f32,
     is_colliding: bool,
 ) {
-    let bubble_color = Color::from(bevy::color::palettes::css::ORANGE)
-        .mix(&Color::from(bevy::color::palettes::css::WHITE), 0.5);
+    let bubble_color =
+        Color::from(PLAYER_COLOR[player]).mix(&Color::from(bevy::color::palettes::css::WHITE), 0.5);
     if is_colliding {
         commands.spawn((
             InGame,
@@ -239,7 +249,7 @@ fn use_turbo(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut cachet_query: Query<(&Transform, &mut ExternalForce, &mut Health), With<Player>>,
+    mut cachet_query: Query<(&Transform, &Player, &mut ExternalForce, &mut Health), With<Player>>,
 ) {
     let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
     rng.gen_range(-60. ..4.);
@@ -248,7 +258,7 @@ fn use_turbo(
     let right_bottom = Vec3::new(32., -13., 0.);
     let top = Vec3::new(0., 13., 0.);
     let center = Vec3::new(0., 0., 0.);
-    for (transform, mut force, mut health) in &mut cachet_query {
+    for (transform, player, mut force, mut health) in &mut cachet_query {
         if is_in_water(&transform.translation) {
             if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::KeyW) {
                 force.apply_force_at_point(
@@ -264,6 +274,7 @@ fn use_turbo(
                         &mut commands,
                         &mut meshes,
                         &mut materials,
+                        player.0,
                         transform.translation
                             + transform.rotation * Vec3::new(rng.gen_range(-60. ..4.), -13., pos),
                         (transform.rotation * Vec3::NEG_Y),
@@ -287,6 +298,7 @@ fn use_turbo(
                         &mut commands,
                         &mut meshes,
                         &mut materials,
+                        player.0,
                         transform.translation
                             + transform.rotation * Vec3::new(rng.gen_range(4. ..60.), -13., pos),
                         (transform.rotation * Vec3::NEG_Y),
@@ -310,6 +322,7 @@ fn use_turbo(
                         &mut commands,
                         &mut meshes,
                         &mut materials,
+                        player.0,
                         transform.translation
                             + transform.rotation * Vec3::new(rng.gen_range(-60. ..60.), 13., pos),
                         (transform.rotation * Vec3::NEG_Y),
@@ -322,6 +335,7 @@ fn use_turbo(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
+                player.0,
                 transform.translation
                     + transform.rotation
                         * Vec3::new(rng.gen_range(-60. ..60.), rng.gen_range(-12. ..12.), 1.),
@@ -445,12 +459,12 @@ pub fn run() {
 
     app.add_plugins(Material2dPlugin::<CachetMaterial>::default());
     app.add_plugins(PhysicsPlugins::default());
-    app.add_plugins(MainMenuPlugin);
 
+    app.add_plugins(MainMenuPlugin);
     app.add_plugins(AudioPlugin);
     app.add_plugins(MyAudioPlugin);
     app.add_plugins(GameHudPlugin);
-
+    app.add_plugins(OnHitPlugin);
     // cfg_if::cfg_if! {
     //     if #[cfg(not(target_arch = "wasm32"))] {
     //         app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());

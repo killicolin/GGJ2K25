@@ -15,7 +15,7 @@ use bevy::{
     utils::default,
 };
 
-use crate::MyAppState;
+use crate::{MyAppState, PlayerNumber};
 
 use super::{
     BORDER_COLOR, BORDER_PX, BORDER_RADIUS_PIXEL, BUTTON_COLOR, BUTTON_HOVER_COLOR, MENU_COLOR,
@@ -141,6 +141,7 @@ fn button_render_system(
 }
 
 fn button_on_press_system(
+    mut commands: Commands,
     mut interaction_query: Query<(&Interaction, &MenuButton), (Changed<Interaction>, With<Button>)>,
     mut exit: EventWriter<AppExit>,
     mut app_state: ResMut<NextState<MyAppState>>,
@@ -148,7 +149,10 @@ fn button_on_press_system(
     for (interaction, menu_button) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
             match menu_button {
-                MenuButton::Start => app_state.set(MyAppState::InGame),
+                MenuButton::Start => {
+                    app_state.set(MyAppState::InGame);
+                    commands.insert_resource(PlayerNumber(4));
+                }
                 MenuButton::Help => todo!(),
                 MenuButton::Quit => {
                     exit.send(AppExit::Success);

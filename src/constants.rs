@@ -1,3 +1,8 @@
+use bevy::{
+    color::{Color, Srgba},
+    math::Vec3,
+};
+
 pub const GRAVITY: f32 = 9.8;
 pub const GRAVITY_SCALE: f32 = 12.;
 pub const FLUID_DENSITY: f32 = 6.5; // Densité de l'eau en kg/m^3
@@ -30,3 +35,39 @@ pub const INITIAL_HEALTH: f32 = 1000.;
 pub const GLOBAL_DAMAGE_SCALE: f32 = 0.1;
 pub const WATER_TICK_DAMAGE: f32 = 1.;
 pub const TURBO_TICK_DAMAGE: f32 = 3.;
+
+// PLAYER
+
+pub const PLAYER_COLOR: [Srgba; 4] = [
+    bevy::color::palettes::css::ORANGE,
+    bevy::color::palettes::css::LIGHT_PINK,
+    bevy::color::palettes::css::LIGHT_GOLDENROD_YELLOW,
+    bevy::color::palettes::css::LAVENDER_BLUSH,
+];
+
+pub const PLAYER_POSITION: [[Vec3; 4]; 4] = [
+    [
+        Vec3::new(0., 0., 0.),
+        Vec3::new(0., 0., 0.),
+        Vec3::new(0., 0., 0.),
+        Vec3::new(0., 0., 0.),
+    ],
+    [
+        Vec3::new(-GLASS_RADIUS / 4.0, 0., 0.),
+        Vec3::new(GLASS_RADIUS / 4.0, 0., 0.),
+        Vec3::new(0., 0., 0.),
+        Vec3::new(0., 0., 0.),
+    ],
+    [
+        Vec3::new(-GLASS_RADIUS * 3. / 5.0, 0., 0.),
+        Vec3::new(0., 0., 0.),
+        Vec3::new(GLASS_RADIUS * 3. / 5.0, 0., 0.),
+        Vec3::new(0., 0., 0.),
+    ],
+    [
+        Vec3::new(-GLASS_RADIUS * 4. / 6.0, 0., 0.),
+        Vec3::new(-GLASS_RADIUS / 6.0, 0., 0.),
+        Vec3::new(GLASS_RADIUS / 6.0, 0., 0.),
+        Vec3::new(GLASS_RADIUS * 4. / 6.0, 0., 0.),
+    ],
+];

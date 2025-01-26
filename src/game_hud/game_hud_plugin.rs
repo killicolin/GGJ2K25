@@ -1,6 +1,9 @@
+use std::usize;
+
 use bevy::{
     app::{FixedPostUpdate, Plugin},
     asset::AssetServer,
+    color::Color,
     prelude::{
         in_state, BuildChildren, ChildBuild, Commands, ImageNode, IntoSystemConfigs, OnEnter,
         Query, Res, With, Without,
@@ -10,7 +13,10 @@ use bevy::{
     utils::default,
 };
 
-use crate::{Health, HudInnerBar, HudPlayer, InGame, MyAppState, Player, INITIAL_HEALTH};
+use crate::{
+    Health, HudInnerBar, HudPlayer, InGame, MyAppState, Player, PlayerNumber, INITIAL_HEALTH,
+    PLAYER_COLOR,
+};
 
 pub struct GameHudPlugin;
 
@@ -35,21 +41,15 @@ fn update_ui(
                 let min = 13.;
                 node.width = Val::Percent(min + (100. - min) * health.0 / INITIAL_HEALTH);
             }
-
-            if hudplayer.0 != 0 {
-                node.display = Display::None;
-            }
-        }
-
-        for (mut node, hudplayer) in &mut query_ui_outer {
-            if hudplayer.0 != 0 {
-                node.display = Display::None;
-            }
         }
     }
 }
 
-fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    player_number: Res<PlayerNumber>,
+) {
     let image_outer_bar = asset_server.load("sprite/bar_outer.png");
     let image_inner_bar = asset_server.load("sprite/bar_inner.png");
 
@@ -72,19 +72,17 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
             },
         ))
         .with_children(|parent| {
-            for (w, h, tag) in [
-                (20.0, 32.0, HudPlayer(0)),
-                (20.0, 32.0, HudPlayer(1)),
-                (20.0, 32.0, HudPlayer(2)),
-                (20.0, 32.0, HudPlayer(3)),
-            ] {
+            let w = 20.0;
+            let h = 32.0;
+            for i in (0..player_number.0) {
                 parent
                     .spawn((
                         InGame,
-                        tag,
+                        HudPlayer(i),
                         ImageNode {
                             image: image_outer_bar.clone(),
                             image_mode: NodeImageMode::Sliced(slicer.clone()),
+                            color: Color::from(PLAYER_COLOR[i]),
                             ..default()
                         },
                         Node {
@@ -101,10 +99,11 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     .with_child((
                         InGame,
                         HudInnerBar,
-                        tag,
+                        HudPlayer(i),
                         ImageNode {
                             image: image_inner_bar.clone(),
                             image_mode: NodeImageMode::Sliced(slicer.clone()),
+                            color: Color::from(PLAYER_COLOR[i]),
                             ..default()
                         },
                         Node {
