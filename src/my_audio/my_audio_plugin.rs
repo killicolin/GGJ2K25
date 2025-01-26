@@ -1,5 +1,5 @@
 use bevy::{
-    app::{Plugin, Update},
+    app::{Plugin, Startup, Update},
     asset::AssetServer,
     input::ButtonInput,
     prelude::{
@@ -312,7 +312,7 @@ impl Plugin for MyAudioPlugin {
         app.add_audio_channel::<EffervescentChannelp4>();
         app.add_audio_channel::<PlayerChannel>();
 
-        app.add_systems(OnEnter(AppState::InGame), play_music);
+        app.add_systems(Startup, play_music);
 
         app.add_systems(
             Update,

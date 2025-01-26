@@ -407,7 +407,7 @@ fn update_camera(
 
     // players participation
     for (player_transform, health) in player_query.iter() {
-        if health.0 > 0.{
+        if health.0 > 0. {
             interest_area = interest_area.union_point(player_transform.translation.xy());
         }
     }
@@ -509,7 +509,7 @@ fn end_game_condition(
     if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
     {
         app_state.set(AppState::MainMenu);
-        menu_state.set(MainMenuState::PlayerMenu);
+        menu_state.set(MainMenuState::HomeMenu);
     }
 }
 
@@ -518,8 +518,7 @@ fn try_kill_by_zone(mut query: Query<(&mut Health, &Transform), With<Player>>) {
     for (mut health, transform) in query.iter_mut() {
         if transform.translation.y < GLASS_HEIGHT * -0.5 {
             health.0 = 0.;
-            if transform.scale.x == 1.
-            {
+            if transform.scale.x == 1. {
                 warn!("player left the area like a wuss");
             }
         }

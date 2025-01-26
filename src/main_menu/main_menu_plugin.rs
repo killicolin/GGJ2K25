@@ -43,7 +43,7 @@ enum HelpMenu {
 #[derive(Component)]
 enum CreditMenu {
     BackButton,
-    CreditImage,
+    HelpImage,
 }
 
 #[derive(Component)]
@@ -58,13 +58,15 @@ pub struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(OnEnter(AppState::MainMenu).is_in_subset(), setup_main_menu);
+        app.add_systems(OnEnter(AppState::MainMenu), setup_main_menu);
         app.add_systems(
             Update,
             (
                 button_render_system,
                 button_on_press_home_system,
                 button_on_press_players_system,
+                button_on_press_help_system,
+                button_on_press_credit_system,
             )
                 .run_if(in_state(AppState::MainMenu)),
         );
@@ -199,11 +201,11 @@ fn button_on_press_home_system(
                     // app_state.set(AppState::InGame);
                     // commands.insert_resource(PlayerNumber(1));
                 }
-                HomeMenuButton::Help => todo!(),
+                HomeMenuButton::Help => menu_state.set(MainMenuState::Help),
                 HomeMenuButton::Quit => {
                     exit.send(AppExit::Success);
                 }
-                HomeMenuButton::Credit => menu_state.set(MainMenuState::PlayerMenu),
+                HomeMenuButton::Credit => menu_state.set(MainMenuState::Credit),
             }
         }
     }
@@ -243,31 +245,61 @@ fn button_on_press_players_system(
     }
 }
 
+fn button_on_press_help_system(
+    mut interaction_query: Query<(&Interaction, &HelpMenu), (Changed<Interaction>, With<Button>)>,
+    mut menu_state: ResMut<NextState<MainMenuState>>,
+) {
+    for (interaction, menu_button) in &mut interaction_query {
+        if *interaction == Interaction::Pressed {
+            match menu_button {
+                HelpMenu::BackButton => menu_state.set(MainMenuState::HomeMenu),
+                HelpMenu::HelpImage => (),
+            }
+        }
+    }
+}
+
+fn button_on_press_credit_system(
+    mut interaction_query: Query<(&Interaction, &CreditMenu), (Changed<Interaction>, With<Button>)>,
+    mut menu_state: ResMut<NextState<MainMenuState>>,
+) {
+    for (interaction, menu_button) in &mut interaction_query {
+        if *interaction == Interaction::Pressed {
+            match menu_button {
+                CreditMenu::BackButton => menu_state.set(MainMenuState::HomeMenu),
+                CreditMenu::HelpImage => (),
+            }
+        }
+    }
+}
+
 fn setup_main_menu(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut menu_state: ResMut<NextState<MainMenuState>>,
+    query: Query<Entity, With<MenuCanvas>>,
 ) {
-    let splash = asset_server.load("sprite/Splash_Screen.png");
-    commands
-        .spawn((
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_content: AlignContent::End,
-                justify_content: JustifyContent::End,
-                align_items: AlignItems::End,
-                ..default()
-            },
-            ImageNode {
-                image: splash,
-                ..default()
-            },
-            BackgroundColor(bevy::color::Color::srgb(0.5, 0.5, 0.5)),
-        ))
-        .with_children(|parent| {
-            create_menu(parent);
-        });
+    if query.get_single().is_err() {
+        let splash = asset_server.load("sprite/Splash_Screen.png");
+        commands
+            .spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_content: AlignContent::End,
+                    justify_content: JustifyContent::End,
+                    align_items: AlignItems::End,
+                    ..default()
+                },
+                ImageNode {
+                    image: splash,
+                    ..default()
+                },
+                BackgroundColor(bevy::color::Color::srgb(0.5, 0.5, 0.5)),
+            ))
+            .with_children(|parent| {
+                create_menu(parent);
+            });
+    }
 }
 //////
 fn despawn_main_menu_fully(
@@ -317,13 +349,6 @@ fn despawn_home_menu(
 }
 
 /////
-
-fn spawn_main_menu_fully(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    query: Query<Entity, With<MenuCanvas>>,
-) {
-}
 
 fn spawn_credit_menu(
     mut commands: Commands,
@@ -394,11 +419,42 @@ fn spawn_home_menu(
         commands.entity(entity).with_children(|menu_parent| {
             create_button(menu_parent, &asset_server, "Start", HomeMenuButton::Start);
             create_button(menu_parent, &asset_server, "Help", HomeMenuButton::Help);
+            create_button(menu_parent, &asset_server, "Credit", HomeMenuButton::Credit);
             cfg_if::cfg_if! {
                 if #[cfg(not(target_arch = "wasm32"))] {
                     create_button(menu_parent, &asset_server, "Quit", HomeMenuButton::Quit);
                 }
             }
         });
+    } else {
+        let splash = asset_server.load("sprite/Splash_Screen.png");
+        commands
+            .spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_content: AlignContent::End,
+                    justify_content: JustifyContent::End,
+                    align_items: AlignItems::End,
+                    ..default()
+                },
+                ImageNode {
+                    image: splash,
+                    ..default()
+                },
+                BackgroundColor(bevy::color::Color::srgb(0.5, 0.5, 0.5)),
+            ))
+            .with_children(|parent| {
+                create_menu(parent).with_children(|menu_parent| {
+                    create_button(menu_parent, &asset_server, "Start", HomeMenuButton::Start);
+                    create_button(menu_parent, &asset_server, "Help", HomeMenuButton::Help);
+                    create_button(menu_parent, &asset_server, "Credit", HomeMenuButton::Credit);
+                    cfg_if::cfg_if! {
+                        if #[cfg(not(target_arch = "wasm32"))] {
+                            create_button(menu_parent, &asset_server, "Quit", HomeMenuButton::Quit);
+                        }
+                    }
+                });
+            });
     }
 }
