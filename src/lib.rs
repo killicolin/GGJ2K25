@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 use bevy::{
-    asset::Assets,
+    asset::{AssetMetaCheck, Assets},
     prelude::*,
     reflect::GetTupleField,
     sprite::Material2dPlugin,
@@ -47,7 +47,7 @@ struct HudPlayer(usize);
 struct HudInnerBar;
 
 #[derive(Component, Copy, Clone)]
-struct EndGameDisplay (u32);
+struct EndGameDisplay(u32);
 
 #[derive(Component, Debug)]
 struct Health(f32);
@@ -510,8 +510,7 @@ fn end_game_condition(
     query: Query<&Health, With<Player>>,
     query_end_menu: Query<(), With<EndGameDisplay>>,
 ) {
-    if ! query_end_menu.is_empty()
-    {
+    if !query_end_menu.is_empty() {
         return;
     }
 
@@ -549,18 +548,25 @@ fn on_game_exit(mut commands: Commands, query: Query<Entity, With<InGame>>) {
 
 pub fn run() {
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Tablet Takedown".to_string(),
-            canvas: Some("#my-bevy".into()),
-            fit_canvas_to_parent: true,
-            resolution: WindowResolution::new(1920., 1080.),
-            prevent_default_event_handling: true,
-            present_mode: PresentMode::AutoVsync,
-            ..default()
-        }),
-        ..default()
-    }));
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Tablet Takedown".to_string(),
+                    canvas: Some("#my-bevy".into()),
+                    fit_canvas_to_parent: true,
+                    resolution: WindowResolution::new(1920., 1080.),
+                    prevent_default_event_handling: true,
+                    present_mode: PresentMode::AutoVsync,
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(AssetPlugin {
+                meta_check: AssetMetaCheck::Never,
+                ..default()
+            }),
+    );
     app.init_state::<AppState>();
     app.init_state::<MainMenuState>();
     app.insert_resource(Gravity(Vec2::NEG_Y * GRAVITY * GRAVITY_SCALE));
