@@ -1,19 +1,18 @@
-use std::usize;
-
 use bevy::{
     app::{FixedPostUpdate, Plugin},
-    asset::AssetServer,
     color::Color,
     prelude::{
-        in_state, BuildChildren, ChildBuild, Commands, Entity, ImageNode, IntoSystemConfigs, NextState, OnEnter, Query, Res, ResMut, With, Without
+        in_state, BuildChildren, ChildBuild, Commands, Entity, ImageNode, IntoSystemConfigs,
+        NextState, OnEnter, Query, Res, ResMut, With,
     },
     sprite::{BorderRect, SliceScaleMode, TextureSlicer},
-    ui::{widget::NodeImageMode, AlignItems, Display, FlexDirection, JustifyContent, Node, UiRect, Val},
+    ui::{widget::NodeImageMode, AlignItems, FlexDirection, JustifyContent, Node, UiRect, Val},
     utils::default,
 };
 
 use crate::{
-    AppState, EndGameDisplay, Health, HudInnerBar, HudPlayer, InGame, MainMenuState, Player, PlayerNumber, INITIAL_HEALTH, MENU_DURATION, PLAYER_COLOR
+    AppState, EndGameDisplay, Health, HudInnerBar, HudPlayer, InGame, MainMenuState, Player,
+    PlayerNumber, SpriteAssets, INITIAL_HEALTH, MENU_DURATION, PLAYER_COLOR,
 };
 
 pub struct GameHudPlugin;
@@ -30,26 +29,23 @@ impl Plugin for GameHudPlugin {
 
 fn end_game_display(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprite_assets: Res<SpriteAssets>,
     player_number: Res<PlayerNumber>,
     query: Query<(&Health, &Player)>,
     mut query_end_menu: Query<(Entity, &mut EndGameDisplay)>,
     mut app_state: ResMut<NextState<AppState>>,
     mut menu_state: ResMut<NextState<MainMenuState>>,
 ) {
-    for (entity, mut end_menu_display) in query_end_menu.iter_mut()
-    {
+    for (entity, mut end_menu_display) in query_end_menu.iter_mut() {
         end_menu_display.0 -= 1;
-        if end_menu_display.0 <= 0
-        {
+        if end_menu_display.0 == 0 {
             commands.entity(entity).despawn();
             app_state.set(AppState::MainMenu);
             menu_state.set(MainMenuState::HomeMenu);
         }
     }
 
-    if ! query_end_menu.is_empty()
-    {
+    if !query_end_menu.is_empty() {
         return;
     }
 
@@ -64,21 +60,20 @@ fn end_game_display(
 
     if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
     {
-        let mut cup_file = "sprite/cup.png";
-        if alive_players == 0
-        {
-            cup_file = "sprite/cup-dead.png";
+        let mut cup_file = &sprite_assets.cup;
+        if alive_players == 0 {
+            cup_file = &sprite_assets.cup_dead;
         }
-        let image_cup = asset_server.load(cup_file);
+        let image_cup = cup_file.clone();
 
         let files = [
-            "sprite/P1_won.png",
-            "sprite/P2_won.png",
-            "sprite/P3_won.png",
-            "sprite/P4_won.png",
+            &sprite_assets.p1_won,
+            &sprite_assets.p2_won,
+            &sprite_assets.p3_won,
+            &sprite_assets.p4_won,
         ];
 
-        let image_winner = asset_server.load(files[last_player_id]);
+        let image_winner = files[last_player_id].clone();
 
         let slicer = TextureSlicer {
             border: BorderRect::square(64.0),
@@ -87,21 +82,21 @@ fn end_game_display(
             max_corner_scale: 1.0,
         };
         commands
-        .spawn((
-            InGame,
-            EndGameDisplay(MENU_DURATION),
-            Node {
-                flex_direction: FlexDirection::Column,
-                width: Val::Percent(100.),
-                height: Val::Percent(100.),
-                // top: Val::Percent(86.0),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::SpaceEvenly,
-                ..default()
-            },
-        ))
-        .with_children(|parent| {
-            parent.spawn((
+            .spawn((
+                InGame,
+                EndGameDisplay(MENU_DURATION),
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
+                    // top: Val::Percent(86.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::SpaceEvenly,
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn((
                     InGame,
                     ImageNode {
                         image: image_cup,
@@ -113,11 +108,10 @@ fn end_game_display(
                         aspect_ratio: Some(1.0),
                         ..default()
                     },
-                )
-            );
+                ));
 
-            if alive_players >= 1 {
-                parent.spawn((
+                if alive_players >= 1 {
+                    parent.spawn((
                         InGame,
                         ImageNode {
                             image: image_winner,
@@ -130,11 +124,9 @@ fn end_game_display(
                             aspect_ratio: Some(2.0),
                             ..default()
                         },
-                    )
-                );
-            }
-        });
-
+                    ));
+                }
+            });
     }
 }
 
@@ -154,11 +146,11 @@ fn update_ui(
 
 fn setup_ui(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    asset_sprite: Res<SpriteAssets>,
     player_number: Res<PlayerNumber>,
 ) {
-    let image_outer_bar = asset_server.load("sprite/bar_outer.png");
-    let image_inner_bar = asset_server.load("sprite/bar_inner.png");
+    let image_outer_bar = asset_sprite.bar_outer.clone();
+    let image_inner_bar = asset_sprite.bar_inner.clone();
 
     let slicer = TextureSlicer {
         border: BorderRect::square(64.0),
@@ -181,7 +173,7 @@ fn setup_ui(
         .with_children(|parent| {
             let w = 20.0;
             let h = 32.0;
-            for i in (0..player_number.0) {
+            for i in 0..player_number.0 {
                 parent
                     .spawn((
                         InGame,

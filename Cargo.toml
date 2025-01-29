@@ -16,12 +16,24 @@ opt-level = 3
 [dependencies]
 cfg-if = "1"
 bevy = "0.15.1"
-rand = "0.8.5"
+rand = "0.9.0"
 bevy_kira_audio = { version = "0.22.0", features = ["wav", "mp3"] }
-avian2d = "0.2.0"
+avian2d = "0.2.1"
+bevy_asset_loader = "0.22.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-bevy-inspector-egui = "0.28.1"
+bevy-inspector-egui = "0.29.1"
 
 [target.wasm32-unknown-unknown]
 runner = "wasm-server-runner"
+cfg-if = "1"
+bevy = "0.15.1"
+
+# Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
+# In some cases they may still signal poor code quality however, so consider commenting out these lines.
+[lints.clippy]
+# Bevy supplies arguments to systems via dependency injection, so it's natural for systems to
+# request more than 7 arguments -- which triggers this lint.
+too_many_arguments = "allow"
+# Queries that access many components may trigger this lint.
+type_complexity = "allow"

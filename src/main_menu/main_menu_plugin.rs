@@ -15,7 +15,7 @@ use bevy::{
     utils::default,
 };
 
-use crate::{AppState, MainMenuState, PlayerNumber};
+use crate::{AppState, FontAssets, MainMenuState, PlayerNumber, SpriteAssets};
 
 use super::{
     BORDER_COLOR, BORDER_PX, BORDER_RADIUS_PIXEL, BUTTON_COLOR, BUTTON_HOVER_COLOR, MENU_COLOR,
@@ -85,7 +85,7 @@ impl Plugin for MainMenuPlugin {
 
 fn create_button<'a, T: Component>(
     parent: &'a mut ChildBuilder,
-    asset_server: &Res<AssetServer>,
+    font_assets: &Res<FontAssets>,
     button_text: &str,
     menu_button: T,
 ) -> EntityCommands<'a> {
@@ -122,7 +122,7 @@ fn create_button<'a, T: Component>(
     binding.with_child((
         Text::new(button_text),
         TextFont {
-            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+            font: font_assets.bold.clone(),
             font_size: 33.0,
             ..default()
         },
@@ -184,13 +184,11 @@ fn button_render_system(
 }
 
 fn button_on_press_home_system(
-    mut commands: Commands,
     mut interaction_query: Query<
         (&Interaction, &HomeMenuButton),
         (Changed<Interaction>, With<Button>),
     >,
     mut exit: EventWriter<AppExit>,
-    mut app_state: ResMut<NextState<AppState>>,
     mut menu_state: ResMut<NextState<MainMenuState>>,
 ) {
     for (interaction, menu_button) in &mut interaction_query {
@@ -198,8 +196,6 @@ fn button_on_press_home_system(
             match menu_button {
                 HomeMenuButton::Start => {
                     menu_state.set(MainMenuState::PlayerMenu);
-                    // app_state.set(AppState::InGame);
-                    // commands.insert_resource(PlayerNumber(1));
                 }
                 HomeMenuButton::Help => menu_state.set(MainMenuState::Help),
                 HomeMenuButton::Quit => {
@@ -275,11 +271,11 @@ fn button_on_press_credit_system(
 
 fn setup_main_menu(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprite_assets: Res<SpriteAssets>,
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if query.get_single().is_err() {
-        let splash = asset_server.load("sprite/Splash_Screen.png");
+        let splash = sprite_assets.background.clone();
         commands
             .spawn((
                 Node {
@@ -351,11 +347,12 @@ fn despawn_home_menu(
 
 fn spawn_credit_menu(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprite_assets: Res<SpriteAssets>,
+    font_assets: Res<FontAssets>,
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if let Ok(entity) = query.get_single() {
-        let credit_png = asset_server.load("sprite/credits.png");
+        let credit_png = sprite_assets.credits.clone();
         commands.spawn((
             Node {
                 width: Val::Percent(100.0),
@@ -369,18 +366,19 @@ fn spawn_credit_menu(
             },
         ));
         commands.entity(entity).with_children(|menu_parent| {
-            create_button(menu_parent, &asset_server, "Back", CreditMenu::BackButton);
+            create_button(menu_parent, &font_assets, "Back", CreditMenu::BackButton);
         });
     }
 }
 
 fn spawn_help_menu(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprite_assets: Res<SpriteAssets>,
+    font_assets: Res<FontAssets>,
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if let Ok(entity) = query.get_single() {
-        let help_png = asset_server.load("sprite/help.png");
+        let help_png = sprite_assets.help.clone();
         commands.spawn((
             Node {
                 width: Val::Percent(80.0),
@@ -394,65 +392,66 @@ fn spawn_help_menu(
             },
         ));
         commands.entity(entity).with_children(|menu_parent| {
-            create_button(menu_parent, &asset_server, "Back", HelpMenu::BackButton);
+            create_button(menu_parent, &font_assets, "Back", HelpMenu::BackButton);
         });
     }
 }
 
 fn spawn_player_menu(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    font_assets: Res<FontAssets>,
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if let Ok(entity) = query.get_single() {
         commands.entity(entity).with_children(|menu_parent| {
             create_button(
                 menu_parent,
-                &asset_server,
+                &font_assets,
                 "Training",
                 PlayerMenuButton::Training,
             );
             create_button(
                 menu_parent,
-                &asset_server,
+                &font_assets,
                 "2 Players",
                 PlayerMenuButton::Two_Player,
             );
             create_button(
                 menu_parent,
-                &asset_server,
+                &font_assets,
                 "3 Players",
                 PlayerMenuButton::Three_Player,
             );
             create_button(
                 menu_parent,
-                &asset_server,
+                &font_assets,
                 "4 Players",
                 PlayerMenuButton::Four_Player,
             );
-            create_button(menu_parent, &asset_server, "Back", PlayerMenuButton::Back);
+            create_button(menu_parent, &font_assets, "Back", PlayerMenuButton::Back);
         });
     }
 }
 
 fn spawn_home_menu(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprite_assets: Res<SpriteAssets>,
+    font_assets: Res<FontAssets>,
     query: Query<Entity, With<MenuCanvas>>,
 ) {
     if let Ok(entity) = query.get_single() {
         commands.entity(entity).with_children(|menu_parent| {
-            create_button(menu_parent, &asset_server, "Start", HomeMenuButton::Start);
-            create_button(menu_parent, &asset_server, "Help", HomeMenuButton::Help);
-            create_button(menu_parent, &asset_server, "Credit", HomeMenuButton::Credit);
+            create_button(menu_parent, &font_assets, "Start", HomeMenuButton::Start);
+            create_button(menu_parent, &font_assets, "Help", HomeMenuButton::Help);
+            create_button(menu_parent, &font_assets, "Credit", HomeMenuButton::Credit);
             cfg_if::cfg_if! {
                 if #[cfg(not(target_arch = "wasm32"))] {
-                    create_button(menu_parent, &asset_server, "Quit", HomeMenuButton::Quit);
+                    create_button(menu_parent, &font_assets, "Quit", HomeMenuButton::Quit);
                 }
             }
         });
     } else {
-        let splash = asset_server.load("sprite/Splash_Screen.png");
+        let splash = sprite_assets.background.clone();
         commands
             .spawn((
                 Node {
@@ -471,12 +470,12 @@ fn spawn_home_menu(
             ))
             .with_children(|parent| {
                 create_menu(parent).with_children(|menu_parent| {
-                    create_button(menu_parent, &asset_server, "Start", HomeMenuButton::Start);
-                    create_button(menu_parent, &asset_server, "Help", HomeMenuButton::Help);
-                    create_button(menu_parent, &asset_server, "Credit", HomeMenuButton::Credit);
+                    create_button(menu_parent, &font_assets, "Start", HomeMenuButton::Start);
+                    create_button(menu_parent, &font_assets, "Help", HomeMenuButton::Help);
+                    create_button(menu_parent, &font_assets, "Credit", HomeMenuButton::Credit);
                     cfg_if::cfg_if! {
                         if #[cfg(not(target_arch = "wasm32"))] {
-                            create_button(menu_parent, &asset_server, "Quit", HomeMenuButton::Quit);
+                            create_button(menu_parent, &font_assets, "Quit", HomeMenuButton::Quit);
                         }
                     }
                 });
