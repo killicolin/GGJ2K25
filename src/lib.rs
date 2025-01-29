@@ -3,8 +3,13 @@ use bevy::{
     asset::{AssetMetaCheck, Assets},
     prelude::*,
     reflect::GetTupleField,
+    render::render_resource::ShaderRef,
     sprite::Material2dPlugin,
     window::{PresentMode, WindowResolution},
+};
+use bevy_asset_loader::{
+    asset_collection::AssetCollection,
+    loading_state::{config::ConfigureLoadingState, LoadingState, LoadingStateAppExt},
 };
 use bevy_kira_audio::prelude::*;
 use cachet_material::CachetMaterial;
@@ -20,7 +25,7 @@ mod my_audio;
 mod on_hit;
 
 use constants::*;
-use my_audio::my_audio_plugin::MyAudioPlugin;
+use my_audio::my_audio_plugin::{AudioAssets, MyAudioPlugin};
 use on_hit::on_hit_plugin::OnHitPlugin;
 use rand::Rng;
 
@@ -64,6 +69,7 @@ struct Volume(f32);
 #[derive(States, Debug, Clone, PartialEq, Default, Eq, Hash)]
 pub enum AppState {
     #[default]
+    AssetLoading,
     MainMenu,
     InGame,
 }
@@ -91,7 +97,7 @@ fn resetup(mut commands: Commands, query: Query<Entity, With<Camera2d>>) {
 fn setup_glasses(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    asset_server: Res<AssetServer>,
+    sprite_assets: Res<SpriteAssets>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let mut water_color = Color::from(bevy::color::palettes::css::LIGHT_YELLOW);
@@ -105,7 +111,7 @@ fn setup_glasses(
         Transform::default()
             .with_translation(Vec3::new(0., 1000., -2.))
             .with_scale(Vec3::new(2., 2., 1.)),
-        Sprite::from_image(asset_server.load("sprite/Kitchen.png")),
+        Sprite::from_image(sprite_assets.kitchen.clone()),
     ));
 
     // Arena
@@ -162,14 +168,14 @@ fn setup_glasses(
 
 fn setup_game_player(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprite_assets: Res<SpriteAssets>,
     player_number: Res<PlayerNumber>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CachetMaterial>>,
 ) {
     let width = 1.0 * 128.;
     let height = 0.2 * 128.;
-    let img = asset_server.load("sprite/Cachet.png");
+    let img = &sprite_assets.cachet;
     for i in 0..player_number.0 {
         commands.spawn((
             InGame,
@@ -483,8 +489,8 @@ fn try_kill_by_health(
         if health.0 <= 0. {
             if transform.scale.x == 1. {
                 // bye bye message
-                let mut rng = rand::thread_rng();
-                let choice = rng.gen_range(0..3);
+                let mut rng = rand::rng();
+                let choice = rng.random_range(0..3);
                 match choice {
                     0 => warn!("Player {:?} disolved :'(", player.0),
                     1 => warn!("Player {:?} didn't want to fight anymore", player.0),
@@ -520,12 +526,6 @@ fn end_game_condition(
             alive_players += 1;
         }
     }
-
-    // if (player_number.0 == 1 && alive_players <= 0) || (player_number.0 != 1 && alive_players <= 1)
-    // {
-    //     app_state.set(AppState::MainMenu);
-    //     menu_state.set(MainMenuState::HomeMenu);
-    // }
 }
 
 // kill the player when they are out of the playable area
@@ -563,15 +563,23 @@ pub fn run() {
                 ..default()
             })
             .set(AssetPlugin {
+                mode: AssetMode::Processed,
                 meta_check: AssetMetaCheck::Never,
                 ..default()
             }),
     );
-    app.init_state::<AppState>();
+    app.add_plugins(Material2dPlugin::<CachetMaterial>::default());
+
+    app.init_state::<AppState>().add_loading_state(
+        LoadingState::new(AppState::AssetLoading)
+            .continue_to_state(AppState::MainMenu)
+            .load_collection::<AudioAssets>()
+            .load_collection::<FontAssets>()
+            .load_collection::<SpriteAssets>(),
+    );
     app.init_state::<MainMenuState>();
     app.insert_resource(Gravity(Vec2::NEG_Y * GRAVITY * GRAVITY_SCALE));
 
-    app.add_plugins(Material2dPlugin::<CachetMaterial>::default());
     app.add_plugins(PhysicsPlugins::default());
 
     app.add_plugins(MainMenuPlugin);
@@ -579,12 +587,6 @@ pub fn run() {
     app.add_plugins(MyAudioPlugin);
     app.add_plugins(GameHudPlugin);
     app.add_plugins(OnHitPlugin);
-
-    // cfg_if::cfg_if! {
-    //     if #[cfg(not(target_arch = "wasm32"))] {
-    //         app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
-    //     }
-    // }
 
     app.add_systems(Startup, setup);
 
@@ -612,4 +614,42 @@ pub fn run() {
     app.add_systems(OnExit(AppState::InGame), on_game_exit);
 
     app.run();
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct SpriteAssets {
+    #[asset(path = "audio/bar_inner.png")]
+    pub bar_inner: Handle<Image>,
+    #[asset(path = "audio/bar_outer.png")]
+    pub bar_outer: Handle<Image>,
+    #[asset(path = "audio/Cachet.png")]
+    pub cachet: Handle<Image>,
+    #[asset(path = "audio/credits.png")]
+    pub credits: Handle<Image>,
+    #[asset(path = "audio/cup-dead.png")]
+    pub cup_dead: Handle<Image>,
+    #[asset(path = "audio/cup.png")]
+    pub cup: Handle<Image>,
+    #[asset(path = "audio/help.png")]
+    pub help: Handle<Image>,
+    #[asset(path = "audio/Kitchen.png")]
+    pub kitchen: Handle<Image>,
+    #[asset(path = "audio/p1_won.png")]
+    pub p1_won: Handle<Image>,
+    #[asset(path = "audio/p2_won.png")]
+    pub p2_won: Handle<Image>,
+    #[asset(path = "audio/p1_won.png")]
+    pub p3_won: Handle<Image>,
+    #[asset(path = "audio/p1_won.png")]
+    pub p4_won: Handle<Image>,
+    #[asset(path = "audio/Splash_Screen.png")]
+    pub background: Handle<Image>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct FontAssets {
+    #[asset(path = "fonts/FiraMono-Medium.ttf")]
+    pub medium: Handle<Font>,
+    #[asset(path = "fonts/FiraSans-Bold.ttf")]
+    pub bold: Handle<Font>,
 }
